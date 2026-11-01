@@ -1,4 +1,4 @@
-# ChatLegal — source licence allowlist (chatlegal.uk · Metaspan Ltd)
+# ChatLegal — source licence allowlist (chatlegal.uk)
 
 Status: PLAN MODE research only, no build. Researched 1 Nov 2026 (Europe/London) from official licence, terms and copyright pages. Not legal advice. Re-check every licence before build.
 
@@ -60,7 +60,7 @@ Also watch:
 - **Found:** yes. https://caselaw.nationalarchives.gov.uk/apply-for-a-licence (form). Prep: /what-you-need-to-apply-for-a-licence. Process: /licence-application-process. Contact: caselawlicence@nationalarchives.gov.uk.
 - **What it asks for (29 questions, 6 sections, one sitting, no saving):**
   1. Contact and a senior licence holder.
-  2. Organisation: Metaspan Ltd legal name, company number, partners. May be published.
+  2. Organisation: [legal entity name], company number, partners. May be published.
   3. Purpose: product name, link (chatlegal.uk), main purpose and access type, in 150 words or fewer.
   4. Public statement of 150 words or fewer.
   5. Working practices: anonymise individuals?, bias review, code of ethics, impartial ethics review, publish full record or extracted data?, methodology transparency, high-risk uses, GenAI disclosure to users, explain FCL dataset limits.

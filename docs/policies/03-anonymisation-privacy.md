@@ -1,8 +1,8 @@
 # 03 · Anonymisation & personal privacy (judgments + users)
 
-> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
+> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** ChatLegal (chatlegal.uk) · operating entity: [legal entity name · company number]. Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
 
-Supports TNA Q16 (no focus on individuals), Q17 (anonymise before analysis), MoJ principles 3 (Appropriate scrutiny — jigsaw identification) and 6 (Personal privacy). The FCL licence **is not a data-sharing agreement and not a processing agreement for personal data**; Metaspan Ltd is controller in its own right for any personal data it processes and must meet UK GDPR / DPA 2018 independently.
+Supports TNA Q16 (no focus on individuals), Q17 (anonymise before analysis), MoJ principles 3 (Appropriate scrutiny — jigsaw identification) and 6 (Personal privacy). The FCL licence **is not a data-sharing agreement and not a processing agreement for personal data**; The operating entity is controller in its own right for any personal data it processes and must meet UK GDPR / DPA 2018 independently.
 
 ## Part A — Judgments and decisions (Find Case Law, SCTS, Judiciary NI, tribunals)
 
@@ -30,7 +30,7 @@ Daily revalidation against FCL; withdrawn or revised judgments removed from raw 
 ## Part B — Users of chatlegal.uk
 
 ### B1. Roles
-Metaspan Ltd is controller. LLM, embedding, hosting and analytics vendors are processors under Art 28 contracts — [list sub-processors]. No vendor may train on user data (zero-retention / no-training terms required).
+The operating entity is controller. LLM, embedding, hosting and analytics vendors are processors under Art 28 contracts — [list sub-processors]. No vendor may train on user data (zero-retention / no-training terms required).
 
 ### B2. Data we collect
 Account (email, tier, payment via [payment processor] — we do not store card numbers); session content (the user's situation, questions, uploaded letters); safety flags; usage logs. Users are told not to upload others' sensitive data unless needed.

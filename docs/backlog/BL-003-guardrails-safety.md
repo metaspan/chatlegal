@@ -44,6 +44,6 @@ Also track for the same framework (may share classifiers): violent crime plannin
 
 ## Open questions
 1. Which vendors vs in-house classifiers; UK data residency?
-2. Mandatory reporting thresholds and who is accountable at Metaspan?
+2. Mandatory reporting thresholds and who is accountable at the operating entity?
 3. How OCR pipelines short-circuit when CSE is suspected mid-document?
 4. Age gate interaction (18+ proposal in policy open items) with CSE handling?

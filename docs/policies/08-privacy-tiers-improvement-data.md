@@ -1,6 +1,6 @@
 # 08 · Privacy, tiers & improvement data
 
-> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
+> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** ChatLegal (chatlegal.uk) · operating entity: [legal entity name · company number]. Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
 
 Supports MoJ principle 6 (Personal privacy) and the product's tier model. Read with 03.
 
@@ -17,7 +17,7 @@ Core service quality, safety information and escalation are **identical on every
 - Sessions from opted-in users, **anonymised** (03 Part A rules applied to user text: names, addresses, contact details, case numbers, employer names, dates of birth etc. replaced with role tokens; free-text special-category details generalised) before entering:
   - the **opt-in case corpus** (encrypted, separate store, separate keys, restricted access);
   - internal evaluation sets; and
-  - [optional] fine-tuning/prompt improvement by Metaspan only.
+  - [optional] fine-tuning/prompt improvement by the product operator only.
 - Never sold; never shared with third parties except processors under contract; never used by model vendors to train their models.
 
 ## Hard rules
@@ -35,7 +35,7 @@ Core service quality, safety information and escalation are **identical on every
 
 ## Paid & Pro consumer terms
 - Subscriptions comply with DMCC Act 2024 subscription-contract rules [commencement date to confirm] and Consumer Contracts Regulations 2013 (cancellation rights): clear pre-contract info, easy cancellation, renewal reminders.
-- Pro/team: Metaspan is controller for each member's individual use; for team-shared cases, team org may be controller and Metaspan processor — [Legal to decide; DPA template needed].
+- Pro/team: the product operator is controller for each member's individual use; for team-shared cases, team org may be controller and the product operator may be processor — [Counsel to decide; DPA template needed].
 
 ## Lawful bases (proposed, Legal to confirm)
 | Purpose | Art 6 | Art 9 / Sch 1 |

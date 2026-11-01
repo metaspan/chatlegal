@@ -1,6 +1,6 @@
 # ChatLegal policy set — index
 
-> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
+> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** ChatLegal (chatlegal.uk) · operating entity: [legal entity name · company number]. Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
 
 ChatLegal is a free/affordable UK citizen legal **information + triage** service (England & Wales first; jurisdiction-tagged sources). It is not a solicitor, not legal advice, not representation, not a reserved legal activity, not Citizens Advice.
 
@@ -25,10 +25,10 @@ P1–P9 = MoJ principles: Dignity of the court · Independence of the court · A
 - No build until Derek lifts plan mode.
 
 ## Open items (summary — detail in 09 §Open items)
-1. Name the [Ethics Reviewer] (independent of Metaspan product line) and decide whether a 3-person Ethics Advisory Panel is needed.
+1. Name the [Ethics Reviewer] (independent of the ChatLegal product line) and decide whether a 3-person Ethics Advisory Panel is needed.
 2. Q25 high-risk framing: email caselawlicence@nationalarchives.gov.uk **before** applying.
 3. Q21 wording: confirm with TNA whether linking/signposting to the full FCL judgment counts as "Yes".
-4. Controller details: Metaspan Ltd [company number], [registered address], ICO registration [ICO reg no.], [DPO or privacy lead].
+4. Controller details: [legal entity name · company number], [registered address], ICO registration [ICO reg no.], [DPO or privacy lead].
 5. [Senior licence holder] and [Main contact] for the TNA form.
 6. LLM/embedding sub-processors, hosting region, transfer mechanism (IDTA/Addendum), zero-retention terms.
 7. Retention periods for sessions, opt-in corpus, logs.

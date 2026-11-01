@@ -1,6 +1,6 @@
 # ChatLegal — project brief
 
-**Product:** chatlegal.uk · **Entity:** Metaspan Ltd (unless a separate vehicle is formed)  
+**Product:** chatlegal.uk · **Entity:** [legal entity — TBD]  
 **Status:** Plan mode — design and licensing only until build is authorised.  
 **Audience:** Public product documentation. Not legal advice.
 
@@ -27,7 +27,7 @@ It is **information + triage + cited retrieval**, not an “AI solicitor,” not
 Avoid CAB / Citizens Advice. Prefer information / cases / cite over solicitor / counsel.  
 **Favoured domain:** chatlegal.uk · **Spare:** chatlaw.uk · Public brand name still TBD.
 
-Earlier shortlist for reference: PlainLaw, CaseChat, CiteUK, PublicCase, LawTriage; Metaspan-family CaseSpan / CiteSpan / LawSpan.
+Earlier shortlist for reference: PlainLaw, CaseChat, CiteUK, PublicCase, LawTriage
 
 ## Case model
 

@@ -1,20 +1,22 @@
 # ChatLegal
 
-UK citizen legal-**information** product ([chatlegal.uk](https://chatlegal.uk)) by Metaspan Ltd.
+UK citizen legal-**information** product ([chatlegal.uk](https://chatlegal.uk)).
 
-Information + triage + cited retrieval — not legal advice, and not an AI solicitor.
+**Not a solicitor. Not legal advice.** Information, triage, and cited retrieval for everyday problems (housing, employment, consumer, welfare), with clear escalation when a lawyer or official process is needed.
 
-**Status:** plan mode. Docs only until build is authorised.
+Plan-mode documentation lives in [`docs/`](docs/). Build is off until explicitly authorised.
 
-## Docs
+## Docs map
 
-See [`docs/`](./docs/) for the project brief, source licence allowlist, eval pack, and draft policies.
+| Path | What |
+|---|---|
+| [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md) | Positioning, case model, sources, open decisions |
+| [docs/EVAL_PACK.md](docs/EVAL_PACK.md) | Locked first eval set (5 stories) |
+| [docs/SOURCE_LICENCE_ALLOWLIST.md](docs/SOURCE_LICENCE_ALLOWLIST.md) | Source × licence allowlist |
+| [docs/policies/](docs/policies/) | Draft ethics, privacy, GenAI, TNA answers |
+| [docs/backlog/](docs/backlog/) | BL-001 case work area · BL-002 tech design · BL-003 guardrails |
+| [CONTRIBUTORS.md](CONTRIBUTORS.md) | Acknowledgements |
 
-## Domains
+## Licence for this repo
 
-- Favoured: `chatlegal.uk`
-- Spare: `chatlaw.uk`
-
-## Contributors
-
-See [CONTRIBUTORS.md](./CONTRIBUTORS.md).
+Documentation in this repository is published under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) unless a file says otherwise. It is **not** legal advice.

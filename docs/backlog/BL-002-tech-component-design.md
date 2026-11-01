@@ -8,7 +8,6 @@
 
 Define the technical architecture for ChatLegal as a set of components, interfaces, and non-goals — enough to estimate build, hosting, and compliance — without implementing yet.
 
-**Pattern note:** Prefer patterns already proven in Metaspan’s Tourbillon **chat** and **concierge** flows (session model, tool/MCP handoff, approval-style human steps where needed). Reuse patterns and lessons; do not reuse Tourbillon branding or product coupling in ChatLegal docs or UX.
 
 ## Components in scope
 
@@ -17,7 +16,6 @@ Define the technical architecture for ChatLegal as a set of components, interfac
 - Leaf/protocol selection and guided turns
 - Citation UI; GenAI disclosure chrome ([policies/05](../policies/05-genai-disclosure.md))
 - Escalation / handoff surfaces
-- Optional: Tourbillon-like concierge pattern for structured intake vs free chat
 
 ### 2. RAG platform
 - Ingest pipeline for **allowlisted** sources only (OGL / licensed FCL after TNA Transactional licence)
@@ -64,5 +62,4 @@ Define the technical architecture for ChatLegal as a set of components, interfac
 ## Open questions
 1. UK-only hosting required at launch?
 2. BYO key for Pro only, or never?
-3. How much Tourbillon chat/concierge code vs pattern reuse only?
 4. Single-tenant vs multi-tenant data isolation for Pro teams?

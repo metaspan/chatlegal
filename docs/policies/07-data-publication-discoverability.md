@@ -1,6 +1,6 @@
 # 07 · Data publication & discoverability
 
-> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
+> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** ChatLegal (chatlegal.uk) · operating entity: [legal entity name · company number]. Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
 
 Supports TNA Q21 (entire record online), Q22 (extracted data published), Q23 (methodology), Q24 (publish findings), MoJ principle 7 (Discoverability: no search-engine indexing of judgment contents).
 

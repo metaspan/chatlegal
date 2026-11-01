@@ -1,20 +1,20 @@
 # 02 · Ethics governance & impartial review
 
-> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
+> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** ChatLegal (chatlegal.uk) · operating entity: [legal entity name · company number]. Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
 
 Supports TNA Q20 (impartial review against an ethical framework), Q23 (methodology for scrutiny), MoJ principles 3 (Appropriate scrutiny) and 5 (Anti-bias).
 
 ## Roles
 | Role | Holder | Duties |
 |---|---|---|
-| Senior licence holder | [Senior licence holder], Metaspan Ltd | Accountable for TNA licence compliance and this policy set. |
+| Senior licence holder | [Senior licence holder], [legal entity] | Accountable for TNA licence compliance and this policy set. |
 | Product owner | [Product owner] | Ships within policy; owns eval set and model changes. |
 | Privacy lead / DPO | [DPO or privacy lead] | DPIA, data-subject rights, breach handling. |
 | **Ethics Reviewer** (impartial) | [Ethics Reviewer] — to be appointed | Independent review against the Code of Ethics (01) and MoJ nine principles. |
 | Ethics Advisory Panel (optional, scale-up) | [Panel members] | 3 people incl. at least one practising/academic lawyer and one access-to-justice or lay-user representative. |
 
 ## Independence test for the Ethics Reviewer
-- Not an employee, director or shareholder of Metaspan Ltd or any partner; no fee contingent on product revenue.
+- Not an employee, director or shareholder of the operating entity or any partner; no fee contingent on product revenue.
 - Relevant background: legal ethics, access to justice, data ethics or research ethics (e.g. university REC member, law-centre lead, retired practitioner).
 - Written terms of reference; fixed fee or honorarium; can publish a dissent on the transparency page.
 - Declared conflicts recorded in the register.

@@ -1,6 +1,6 @@
 # 09 · TNA Find Case Law licence — proposed working-practices answers (Q16–28) + nine-principles outline
 
-> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
+> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** ChatLegal (chatlegal.uk) · operating entity: [legal entity name · company number]. Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
 
 Form: https://caselaw.nationalarchives.gov.uk/apply-for-a-licence (6 sections, 29 questions, one sitting, no save). Questions confirmed from https://caselaw.nationalarchives.gov.uk/what-you-need-to-apply-for-a-licence on 1 Nov 2026. Contact: caselawlicence@nationalarchives.gov.uk.
 
@@ -25,11 +25,11 @@ Form: https://caselaw.nationalarchives.gov.uk/apply-for-a-licence (6 sections, 2
 
 ## Other form fields (placeholders)
 - Q1–3: Main contact [Main contact name/email]; Licence holder [Senior licence holder name/email].
-- Organisation: Metaspan Ltd; other names: ChatLegal; country: [England & Wales]; address [registered address]; type: private limited company; identifier [company number]; partners: [none / list model vendors only if they perform analysis].
+- Organisation: [legal entity]; other names: ChatLegal; country: [England & Wales]; address [registered address]; type: private limited company; identifier [company number]; partners: [none / list model vendors only if they perform analysis].
 - Q10: ChatLegal. Q11: https://chatlegal.uk. Q13: Public access (Free tier) — [Legal: or "Other" given paid tiers].
 
 ## Draft public statement (Q12/Q15, ~150 words)
-ChatLegal (Metaspan Ltd) helps ordinary people in England and Wales understand everyday legal problems — housing, employment, money, consumer and benefits — when they cannot easily reach a lawyer. It is free or low-cost. Users describe their situation; ChatLegal identifies the type of issue and explains, in plain English, the relevant law, key deadlines and the options available, citing legislation, official guidance and published judgments, and directing people to advisers, solicitors or courts where needed. It does not give legal advice or predict case outcomes. We will use natural-language processing and retrieval over anonymised Find Case Law judgments so that explanations can point to real, current authority, always linking to the full judgment on Find Case Law. Judgment text is never indexed by search engines. Our methodology, ethics code and the limits of the collection are published, and an independent reviewer audits our work. *(≈150 words — trim at final)*
+ChatLegal helps ordinary people in England and Wales understand everyday legal problems — housing, employment, money, consumer and benefits — when they cannot easily reach a lawyer. It is free or low-cost. Users describe their situation; ChatLegal identifies the type of issue and explains, in plain English, the relevant law, key deadlines and the options available, citing legislation, official guidance and published judgments, and directing people to advisers, solicitors or courts where needed. It does not give legal advice or predict case outcomes. We will use natural-language processing and retrieval over anonymised Find Case Law judgments so that explanations can point to real, current authority, always linking to the full judgment on Find Case Law. Judgment text is never indexed by search engines. Our methodology, ethics code and the limits of the collection are published, and an independent reviewer audits our work. *(≈150 words — trim at final)*
 
 ## Nine-principles statement — outline (Q29)
 1. **Dignity of the court** — neutral, accurate descriptions; no judge/court rankings or ridicule; cite-or-refuse; escalate to proper court routes. (01 #5)
@@ -48,7 +48,7 @@ ChatLegal (Metaspan Ltd) helps ordinary people in England and Wales understand e
 | 1 | Appoint impartial [Ethics Reviewer] (and decide on 3-person panel). Q20 depends on it | Derek + Legal |
 | 2 | Email TNA re Q25 (option 3 risk) and Q21 (signposting) before applying | Legal |
 | 3 | [Senior licence holder] and [Main contact] names/emails | Derek |
-| 4 | Metaspan Ltd [company number], [registered address], ICO registration [ICO reg no.] | Derek |
+| 4 | [legal entity · company number · registered address · ICO reg] | Derek |
 | 5 | [DPO or privacy lead]; privacy email | Derek + Legal |
 | 6 | Lawful bases for service (Free tier) and Art 9 condition | Legal |
 | 7 | Sub-processors (LLM, embeddings, hosting region), IDTA/transfer mechanism, zero-retention terms | Derek |

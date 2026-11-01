@@ -1,13 +1,7 @@
 # ChatLegal docs
 
-Self-contained plan-mode documentation for **chatlegal.uk** (Metaspan Ltd).
+Self-contained plan-mode documentation for **chatlegal.uk**.
 
-| Doc | Purpose |
-|---|---|
-| [PROJECT_BRIEF.md](./PROJECT_BRIEF.md) | Public product brief and case model |
-| [SOURCE_LICENCE_ALLOWLIST.md](./SOURCE_LICENCE_ALLOWLIST.md) | Source × licence research for search/ingest |
-| [EVAL_PACK.md](./EVAL_PACK.md) | Locked eval set — 5 stories with acceptance criteria |
-| [policies/](./policies/) | Draft ethics, privacy, GenAI, and TNA working-practice policies |
-| [backlog/](./backlog/) | Feature backlog (plan mode) |
+Start with [PROJECT_BRIEF.md](PROJECT_BRIEF.md). Policies are under [policies/](policies/). Backlog items are under [backlog/](backlog/).
 
 All policies are **DRAFT · for review by qualified counsel · not legal advice**. Build stays off until authorised.
