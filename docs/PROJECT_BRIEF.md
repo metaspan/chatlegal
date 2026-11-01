@@ -38,6 +38,8 @@ The session picks a leaf; the protocol derives key dates and an activity checkli
 
 **Every leaf emits:** key dates + activities (intake → documents → cited information memo → options map → escalate/refer · optional GDPR opt-in).
 
+Planned **case work area** (discovery questionnaire, document OCR/entity extraction, timeline, gap tasks): [backlog/BL-001-case-work-area.md](./backlog/BL-001-case-work-area.md).
+
 ## Example user stories
 
 - **Housing:** mould, deposit, possession notices (incl. post–May 2026 Renters’ Rights transition), noise, boundary/fence, right of way.
