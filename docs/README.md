@@ -10,4 +10,4 @@ Self-contained plan-mode documentation for **chatlegal.uk** (Metaspan Ltd).
 | [policies/](./policies/) | Draft ethics, privacy, GenAI, and TNA working-practice policies |
 | [backlog/](./backlog/) | Feature backlog (plan mode) |
 
-All policies are **DRAFT · for Legal review · not legal advice**. Build stays off until authorised.
+All policies are **DRAFT · for review by qualified counsel · not legal advice**. Build stays off until authorised.

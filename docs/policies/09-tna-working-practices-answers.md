@@ -1,6 +1,6 @@
 # 09 · TNA Find Case Law licence — proposed working-practices answers (Q16–28) + nine-principles outline
 
-> **DRAFT · PLAN MODE · for Legal review · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
+> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
 
 Form: https://caselaw.nationalarchives.gov.uk/apply-for-a-licence (6 sections, 29 questions, one sitting, no save). Questions confirmed from https://caselaw.nationalarchives.gov.uk/what-you-need-to-apply-for-a-licence on 1 Nov 2026. Contact: caselawlicence@nationalarchives.gov.uk.
 

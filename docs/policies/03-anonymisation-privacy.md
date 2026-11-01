@@ -1,6 +1,6 @@
 # 03 · Anonymisation & personal privacy (judgments + users)
 
-> **DRAFT · PLAN MODE · for Legal review · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
+> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
 
 Supports TNA Q16 (no focus on individuals), Q17 (anonymise before analysis), MoJ principles 3 (Appropriate scrutiny — jigsaw identification) and 6 (Personal privacy). The FCL licence **is not a data-sharing agreement and not a processing agreement for personal data**; Metaspan Ltd is controller in its own right for any personal data it processes and must meet UK GDPR / DPA 2018 independently.
 

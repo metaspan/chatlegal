@@ -1,6 +1,6 @@
 # 05 · Generative AI disclosure
 
-> **DRAFT · PLAN MODE · for Legal review · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
+> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
 
 Supports TNA Q26 (notify GenAI use = Yes), Q25 (not automated legal advice), MoJ principle 8 (Algorithmic transparency). Also SRA/LSA holding-out risk and consumer-law misleading-practice rules (DMCC Act 2024 Part 4).
 

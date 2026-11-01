@@ -1,6 +1,6 @@
 # 01 · Code of Ethics
 
-> **DRAFT · PLAN MODE · for Legal review · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
+> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
 
 ## Purpose
 The rules every person, model, prompt and pipeline at ChatLegal follows. Breach is a reportable incident (02 §Incidents). Supports TNA Q19 and MoJ principles 1 (Dignity) and 2 (Independence).

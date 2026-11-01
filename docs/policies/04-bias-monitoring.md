@@ -1,6 +1,6 @@
 # 04 · Bias monitoring & anti-discrimination
 
-> **DRAFT · PLAN MODE · for Legal review · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
+> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
 
 Supports TNA Q18 (regular bias review), MoJ principles 4 (Anti-discriminatory harm) and 5 (Anti-bias). Also aligns with Equality Act 2010 (services) and ICO fairness guidance.
 

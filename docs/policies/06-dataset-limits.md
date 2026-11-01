@@ -1,6 +1,6 @@
 # 06 · Dataset limits & accurate representation (esp. Find Case Law)
 
-> **DRAFT · PLAN MODE · for Legal review · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
+> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
 
 Supports TNA Q27 (explain FCL limits = Yes), MoJ principles 3 (Appropriate scrutiny) and 9 (Accurate data representation).
 

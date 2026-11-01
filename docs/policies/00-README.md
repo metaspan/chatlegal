@@ -1,6 +1,6 @@
 # ChatLegal policy set — index
 
-> **DRAFT · PLAN MODE · for Legal review · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
+> **DRAFT · PLAN MODE · for review by qualified counsel · not legal advice.** Metaspan Ltd ([company number]), trading as ChatLegal (chatlegal.uk). Version 0.1 · 1 Nov 2026 · Owner: [Policy owner] · Next review: [date].
 
 ChatLegal is a free/affordable UK citizen legal **information + triage** service (England & Wales first; jurisdiction-tagged sources). It is not a solicitor, not legal advice, not representation, not a reserved legal activity, not Citizens Advice.
 
@@ -21,7 +21,7 @@ These policies exist to (1) keep the product inside UK regulatory lines (Legal S
 P1–P9 = MoJ principles: Dignity of the court · Independence of the court · Appropriate scrutiny · Anti-discriminatory harm · Anti-bias · Personal privacy · Discoverability · Algorithmic transparency · Accurate data representation.
 
 ## Status
-- All documents: DRAFT v0.1, not adopted. Adoption requires sign-off by [Senior licence holder] and Legal · Legal and Compliance.
+- All documents: DRAFT v0.1, not adopted. Adoption requires sign-off by [Senior licence holder] and [qualified counsel].
 - No build until Derek lifts plan mode.
 
 ## Open items (summary — detail in 09 §Open items)

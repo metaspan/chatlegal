@@ -73,7 +73,7 @@ Also watch:
   4. Design takedown sync, i.e. re-check the current version.
   5. Set `noindex` on judgment text.
   6. Write a GenAI disclosure.
-  7. Have Legal review the draft.
+  7. Have qualified counsel review the draft.
   8. Consider asking caselawlicence@ first about the triage high-risk question.
 - **Inconsistency to resolve:** the "Using Find Case Law records" page says a licence is needed for "incorporating large numbers of judgments into commercial products". Other TNA pages say incorporating judgments into products is free and only computational analysis needs a licence. Ask TNA.
 

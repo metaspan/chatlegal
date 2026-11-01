@@ -66,7 +66,7 @@ Tag every chunk `EW` | `SCT` | `NIR` | `UK`. Never mix Scots or NI procedure int
 2. ~~Source licence research~~ — see allowlist
 3. ~~Domain~~ — chatlegal.uk favoured
 4. Draft policies for TNA / ethics / tiers — see [policies/](./policies/)
-5. TNA computational-analysis licence application (after Legal sign-off on open items)
+5. TNA computational-analysis licence application (after sign-off by qualified counsel on open items)
 
 ## Contributors
 
