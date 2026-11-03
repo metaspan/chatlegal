@@ -86,7 +86,7 @@ Colour is the docs-site M1 palette, in `app/globals.css`. Shadcn names point at 
 |---|---|
 | App bar | Burgundy chrome, ChatLegal, show or hide each side pane, colour theme, Clerk account, sign out |
 | Left | Search, New chat, the user's library, the open matter's files, and the signed-in user's matters. The library is empty until a file is added. Matters are empty until the first new chat |
-| Centre | The open matter's messages, its summary when one exists, and a text box. Send saves your words on that matter. A reply is not written yet. An empty centre invites you to start a matter. `/` also shows the signed-in session |
+| Centre | The open matter's messages, its summary when one exists, and a text box. Send saves your words on that matter. A stored askChoice card renders in that transcript; the pick is saved on the same matter and the card locks. A reply is not written yet, and a model does not ask the question yet. An empty centre invites you to start a matter. `/` also shows the signed-in session |
 | Right | Viewer placeholders for Markdown, an image, and a PDF. Chat state shows the open matter's summary |
 
 The product disclaimer stays under the panes. `/matters` and `/work` still exist; their short notes render above the thread.
@@ -101,7 +101,8 @@ Workspace files use Mastra `Workspace` and `LocalFilesystem` from `@mastra/core`
 
 - Clerk Organizations, seats, and workspace switching.
 - A model reply after Send. The user's message is stored. TODO(G-01 Concierge): stream the assistant reply. Turning on `CHATLEGAL_OM_MODEL` lets the observer write a summary later. It does not write that reply. It does not attach an agent to the workspace.
-- AG-UI chat, widgets, TaskRunner, and HITL `ask_user`.
+- A live model that emits `askChoice`. The centre pane already renders a stored card (one option, or several when `multiSelect` is set) and saves the pick on the matter (`clerk:<userId>`). A second pick is refused. TODO(G-01 Concierge): call `appendAskChoice` from the model tool and resume the run with `{ widget, version, answer }`. `allowCustom` is not part of that card. Dismiss and AG-UI resume are not wired. `POST /api/matters/:id/widgets` is the stub that stores a card without a model.
+- AG-UI chat and TaskRunner.
 - `hitly-net/hitl-spec@3410eda` schemas are not vendored yet.
 
 Next slices should start from the pins in the pull request, not from a new layout.

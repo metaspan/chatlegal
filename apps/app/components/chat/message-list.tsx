@@ -1,5 +1,6 @@
+import { AskChoiceCard } from '@/components/chat/ask-choice-card'
 import { toolUseLabel } from '@/lib/matters/present'
-import type { MatterMessage } from '@/lib/matters/types'
+import type { AskChoiceAnswer, MatterMessage } from '@/lib/matters/types'
 import { cn } from '@/lib/utils'
 
 /**
@@ -11,11 +12,22 @@ import { cn } from '@/lib/utils'
  * Tool rows are a single plain line. The tool-state card in that chat
  * pretty-prints JSON; this pane does not.
  */
-export function MessageList({ messages }: { messages: readonly MatterMessage[] }) {
+export function MessageList({
+  messages,
+  onAnswerWidget,
+  answeringWidgetId = null,
+  widgetError = null,
+}: {
+  messages: readonly MatterMessage[]
+  onAnswerWidget?: (toolCallId: string, answer: AskChoiceAnswer) => void
+  answeringWidgetId?: string | null
+  widgetError?: { toolCallId: string; message: string } | null
+}) {
   return (
     <ol className="flex flex-col gap-4" aria-label="Messages">
       {messages.map((message) => {
         const fromYou = message.role === 'user'
+        const widget = message.widget
         return (
           <li
             key={message.id}
@@ -23,7 +35,11 @@ export function MessageList({ messages }: { messages: readonly MatterMessage[] }
             data-message-role={message.role}
             data-message-pending={message.pending ? 'true' : 'false'}
             data-item={fromYou ? 'user' : 'assistant'}
-            className={cn('flex max-w-[80%] flex-col gap-1', fromYou ? 'self-end items-end' : 'self-start')}
+            className={cn(
+              'flex flex-col gap-1',
+              widget ? 'w-full max-w-xl' : 'max-w-[80%]',
+              fromYou ? 'self-end items-end' : 'self-start',
+            )}
           >
             <p className="sr-only">{fromYou ? 'You' : 'ChatLegal'}</p>
             {message.text ? (
@@ -36,6 +52,14 @@ export function MessageList({ messages }: { messages: readonly MatterMessage[] }
               >
                 {message.text}
               </div>
+            ) : null}
+            {widget ? (
+              <AskChoiceCard
+                widget={widget}
+                busy={answeringWidgetId === widget.toolCallId}
+                error={widgetError?.toolCallId === widget.toolCallId ? widgetError.message : null}
+                onAnswer={onAnswerWidget ? (answer) => onAnswerWidget(widget.toolCallId, answer) : undefined}
+              />
             ) : null}
             {message.tools?.map((tool) => (
               <p key={tool.name} data-tool-use={tool.name} className="text-xs text-muted-foreground">

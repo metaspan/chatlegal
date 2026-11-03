@@ -4,13 +4,15 @@ import { useEffect, useRef, useState } from 'react'
 import {
   isStoredMatterMessage,
   messagesAfterReload,
+  messagesReplacing,
+  messagesWithChoiceAnswer,
   messagesWithOptimistic,
   messagesWithSaved,
   presentStoredMatterMessage,
   resolveMatterMessageText,
 } from '@/lib/matters/message'
 import { isMatterObservations } from '@/lib/matters/present'
-import type { MatterMessage, MatterObservations, MatterSummary, MatterThread, MatterThreadStatus } from '@/lib/matters/types'
+import type { AskChoiceAnswer, MatterMessage, MatterObservations, MatterSummary, MatterThread, MatterThreadStatus } from '@/lib/matters/types'
 
 type OpenMatter = {
   matter: MatterSummary
@@ -26,7 +28,9 @@ type MatterCreateResponse = { matter?: MatterSummary }
  * The server scopes every request to the Clerk user id. This hook only
  * keeps the open matter and its draft attachment on the client.
  * Send appends the user's words on that matter. A model reply is not requested.
- * TODO(G-01 Concierge): stream the assistant reply after the message is stored.
+ * An askChoice card already on the matter can be answered here. The pick is
+ * stored on that same thread. TODO(G-01 Concierge): stream the assistant reply
+ * after the message is stored, and emit askChoice from the model.
  */
 export function useMatterSessions() {
   const [matters, setMatters] = useState<MatterSummary[]>([])
@@ -38,7 +42,10 @@ export function useMatterSessions() {
   const [creating, setCreating] = useState(false)
   const [sendingId, setSendingId] = useState<string | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
+  const [answeringWidgetId, setAnsweringWidgetId] = useState<string | null>(null)
+  const [widgetError, setWidgetError] = useState<{ toolCallId: string; message: string } | null>(null)
   const activeIdRef = useRef<string | null>(null)
+  const threadRef = useRef<OpenMatter | null>(null)
   const sendSeq = useRef(0)
 
   function choose(id: string, known?: OpenMatter | null) {
@@ -46,8 +53,11 @@ export function useMatterSessions() {
     setActiveId(id)
     setThreadError(null)
     setSendError(null)
+    setWidgetError(null)
     setThread(known && known.matter.id === id ? known : null)
   }
+
+  threadRef.current = thread
 
   useEffect(() => {
     let cancelled = false
@@ -181,6 +191,68 @@ export function useMatterSessions() {
     }
   }
 
+  async function answerWidget(toolCallId: string, answer: AskChoiceAnswer): Promise<boolean> {
+    const matterId = activeIdRef.current
+    if (!matterId) return false
+    const current = threadRef.current
+    const widget = current?.matter.id === matterId
+      ? current.messages.find((message) => message.widget?.toolCallId === toolCallId)?.widget
+      : undefined
+    if (!widget || widget.status === 'answered') return false
+    const snapshot = current?.messages ?? []
+    const answeredAt = new Date().toISOString()
+    sendSeq.current += 1
+    setWidgetError(null)
+    setAnsweringWidgetId(toolCallId)
+    setThread((open) => {
+      if (!open || open.matter.id !== matterId) return open
+      return { ...open, messages: messagesWithChoiceAnswer(open.messages, toolCallId, answer, answeredAt) }
+    })
+    try {
+      const response = await fetch(
+        `/api/matters/${encodeURIComponent(matterId)}/widgets/${encodeURIComponent(toolCallId)}/answer`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(answer),
+          cache: 'no-store',
+        },
+      )
+      const body = (await response.json().catch(() => null)) as { message?: unknown } | null
+      const saved = body && isStoredMatterMessage(body.message) ? presentStoredMatterMessage(body.message) : null
+      if (response.status === 409 && saved && activeIdRef.current === matterId) {
+        setThread((open) => {
+          if (!open || open.matter.id !== matterId) return open
+          return { ...open, messages: messagesReplacing(open.messages, saved) }
+        })
+        return false
+      }
+      if (!response.ok || !saved) throw new Error('answer')
+      if (activeIdRef.current === matterId) {
+        setThread((open) => {
+          if (!open || open.matter.id !== matterId) return open
+          return {
+            ...open,
+            matter: { ...open.matter, updatedAt: saved.widget?.answeredAt ?? saved.createdAt },
+            messages: messagesReplacing(open.messages, saved),
+          }
+        })
+      }
+      return true
+    } catch {
+      if (activeIdRef.current === matterId) {
+        setThread((open) => {
+          if (!open || open.matter.id !== matterId) return open
+          return { ...open, messages: snapshot }
+        })
+        setWidgetError({ toolCallId, message: 'That answer was not saved. Try again.' })
+      }
+      return false
+    } finally {
+      setAnsweringWidgetId((currentId) => (currentId === toolCallId ? null : currentId))
+    }
+  }
+
   async function createMatterSession() {
     setCreating(true)
     setListError(null)
@@ -227,8 +299,11 @@ export function useMatterSessions() {
     creating,
     sending: sendingId !== null && sendingId === activeId,
     sendError,
+    answeringWidgetId,
+    widgetError,
     choose,
     createMatterSession,
     sendMessage,
+    answerWidget,
   }
 }

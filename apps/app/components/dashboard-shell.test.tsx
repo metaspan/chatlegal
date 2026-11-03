@@ -201,6 +201,89 @@ describe('dashboard shell', () => {
     assert.doesNotMatch(chat + viewer + history + disclaimer, /I act for you/)
   })
 
+  it('renders a pending askChoice card and an answered one locked to the pick', () => {
+    const options = [
+      { id: 'scheme', label: 'Deposit scheme', description: 'The scheme that holds it' },
+      { id: 'court', label: 'Court' },
+    ]
+    const chat = renderToStaticMarkup(
+      createElement(ChatColumn, {
+        title: 'Deposit',
+        detail: '',
+        matterId: 'matter-1',
+        messages: [
+          { id: 'msg-1', role: 'user', text: 'The landlord has not protected the deposit.', createdAt: '2026-11-03T00:00:00.000Z' },
+          {
+            id: 'msg-2',
+            role: 'assistant',
+            text: '',
+            createdAt: '2026-11-03T00:00:01.000Z',
+            widget: {
+              toolCallId: 'call-pending',
+              name: 'askChoice',
+              version: 2,
+              question: 'Which route fits this notice?',
+              detail: 'Pick one. This is not a decision for you.',
+              options,
+              multiSelect: false,
+              minSelected: 1,
+              maxSelected: 1,
+              recommended: ['scheme'],
+              defaultOption: 'scheme',
+              status: 'pending',
+            },
+          },
+          {
+            id: 'msg-3',
+            role: 'assistant',
+            text: '',
+            createdAt: '2026-11-03T00:00:02.000Z',
+            widget: {
+              toolCallId: 'call-answered',
+              name: 'askChoice',
+              version: 2,
+              question: 'Which papers do you have?',
+              options: [
+                { id: 'tenancy', label: 'Tenancy' },
+                { id: 'certificate', label: 'Certificate' },
+              ],
+              multiSelect: true,
+              minSelected: 1,
+              maxSelected: 2,
+              status: 'answered',
+              answer: { choices: ['tenancy', 'certificate'] },
+              answeredAt: '2026-11-03T00:00:03.000Z',
+            },
+          },
+        ],
+        draft: '',
+        onDraftChange: () => {},
+        onAnswerWidget: () => {},
+        threadStatus: 'ready',
+        observations: { enabled: false, summary: '' },
+      }),
+    )
+    assert.match(chat, /data-widget="askChoice"/)
+    assert.match(chat, /data-widget-status="pending"/)
+    assert.match(chat, /data-widget-status="answered"/)
+    assert.match(chat, /Which route fits this notice\?/)
+    assert.match(chat, /Deposit scheme/)
+    assert.match(chat, /data-option="scheme"/)
+    assert.match(chat, /data-recommended="true"/)
+    assert.match(chat, /Recommended/)
+    assert.match(chat, />Choose</)
+    assert.match(chat, /Which papers do you have\?/)
+    assert.match(chat, /data-multi="true"/)
+    assert.match(chat, /data-card-answer/)
+    assert.match(chat, /Chosen: Tenancy, Certificate/)
+    assert.match(chat, /The landlord has not protected the deposit\./)
+    assert.doesNotMatch(chat, /data-chat-empty/)
+    assert.doesNotMatch(chat, /I act for you|we advise/i)
+    const answered = chat.slice(chat.indexOf('data-widget-status="answered"'))
+    assert.match(answered, /disabled/)
+    assert.doesNotMatch(answered, />Choose</)
+  })
+
   it('composes three panes, collapse controls, and the Clerk account control', () => {
     const shell = fs.readFileSync(path.join(here, 'dashboard-shell.tsx'), 'utf8')
     const bar = fs.readFileSync(path.join(here, 'shell/app-bar.tsx'), 'utf8')
@@ -210,7 +293,9 @@ describe('dashboard shell', () => {
     assert.match(shell, /useMatterSessions/)
     assert.match(shell, /writeDraft/)
     assert.match(shell, /sendMessage/)
+    assert.match(shell, /answerWidget/)
     assert.match(shell, /onSend=/)
+    assert.match(shell, /onAnswerWidget=/)
     assert.match(shell, /ChatColumn/)
     assert.doesNotMatch(shell, /Sending stays off/)
     assert.match(shell, /observations=\{mattersSession\.observations\}/)

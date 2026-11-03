@@ -63,6 +63,8 @@ describe('signed-in pages guard the session', () => {
         'app/api/matters/[matterId]/files/route.ts',
         'app/api/matters/[matterId]/messages/route.ts',
         'app/api/matters/[matterId]/route.ts',
+        'app/api/matters/[matterId]/widgets/[toolCallId]/answer/route.ts',
+        'app/api/matters/[matterId]/widgets/route.ts',
         'app/api/matters/route.ts',
       ],
     )
