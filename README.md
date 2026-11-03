@@ -15,8 +15,10 @@ Plan-mode documentation lives in [`docs/`](docs/). Build is off until explicitly
 | [docs/SOURCE_LICENCE_ALLOWLIST.md](docs/SOURCE_LICENCE_ALLOWLIST.md) | Source × licence allowlist |
 | [docs/protocols/](docs/protocols/) | Draft protocol packs for the five eval leaves |
 | [docs/CASE_TAXONOMY.md](docs/CASE_TAXONOMY.md) | Seed Category → leaf list (EW) |
+| [docs/eval/](docs/eval/) | Draft gold answer pack for the five eval stories |
+| [docs/REFERRALS.md](docs/REFERRALS.md) | Draft referral / escalate destination map |
 | [docs/policies/](docs/policies/) | Draft ethics, privacy, GenAI, TNA answers |
-| [docs/backlog/](docs/backlog/) | BL-001 case work area · BL-002 tech design · BL-003 guardrails · BL-004 protocol packs |
+| [docs/backlog/](docs/backlog/) | BL-001 case work area · BL-002 tech design · BL-003 guardrails · BL-004 protocol packs · BL-005 referral map |
 | [CONTRIBUTORS.md](CONTRIBUTORS.md) | Acknowledgements |
 
 ## Licence for this repo

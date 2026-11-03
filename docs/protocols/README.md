@@ -1,7 +1,7 @@
 # Protocol packs
 
 **Status:** DRAFT · plan mode · not for build · not legal advice  
-**Related:** [EVAL_PACK.md](../EVAL_PACK.md) · [CASE_TAXONOMY.md](../CASE_TAXONOMY.md) · [SOURCE_LICENCE_ALLOWLIST.md](../SOURCE_LICENCE_ALLOWLIST.md) · [BL-001](../backlog/BL-001-case-work-area.md) · [BL-004](../backlog/BL-004-protocol-packs-eval-five.md)
+**Related:** [EVAL_PACK.md](../EVAL_PACK.md) · [CASE_TAXONOMY.md](../CASE_TAXONOMY.md) · [SOURCE_LICENCE_ALLOWLIST.md](../SOURCE_LICENCE_ALLOWLIST.md) · [BL-001](../backlog/BL-001-case-work-area.md) · [BL-004](../backlog/BL-004-protocol-packs-eval-five.md) · [eval gold](../eval/) · [REFERRALS.md](../REFERRALS.md)
 
 ## What a protocol is
 
