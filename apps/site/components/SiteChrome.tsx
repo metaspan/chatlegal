@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import { Disclaimer } from '@/components/Disclaimer'
+import { SuggestEdit } from '@/components/SuggestEdit'
 import {
   flattenNav,
   navGroups,
@@ -121,6 +122,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
         </nav>
         <main id="content" tabIndex={-1} className="content">
           <article className="prose">{children}</article>
+          <SuggestEdit pathname={pathname} />
           <nav className="pager" aria-label="Adjacent pages">
             {prev ? (
               <Link href={prev.href} rel="prev">

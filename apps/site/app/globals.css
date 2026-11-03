@@ -354,6 +354,21 @@ a:hover { text-decoration-thickness: 2px; }
 .callout p:first-child { margin-top: 0; }
 .callout p:last-child { margin-bottom: 0; }
 
+.suggest-edit {
+  max-width: 42rem;
+  margin: 2.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.suggest-edit a {
+  color: var(--muted);
+}
+
+.suggest-edit + .pager {
+  margin-top: 1.25rem;
+}
+
 .pager {
   max-width: 42rem;
   display: grid;

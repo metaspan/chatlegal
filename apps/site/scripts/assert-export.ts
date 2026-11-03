@@ -47,6 +47,25 @@ for (const relative of major) {
   }
 }
 
+const deposit = read('docs/housing/deposit/index.html')
+const depositEdit =
+  'https://github.com/metaspan/chatlegal/edit/main/apps/site/app/docs/housing/deposit/page.mdx'
+if (!deposit.includes('Suggest a change to this page…') || !deposit.includes(depositEdit)) {
+  console.error('Deposit page is missing the suggest-edit link')
+  process.exit(1)
+}
+if (!deposit.includes('target="_blank"') || !deposit.includes('rel="noopener noreferrer"')) {
+  console.error('Suggest-edit link is missing target or rel')
+  process.exit(1)
+}
+
+const overview = read('docs/index.html')
+const overviewEdit = 'https://github.com/metaspan/chatlegal/edit/main/apps/site/app/docs/page.mdx'
+if (!overview.includes(overviewEdit)) {
+  console.error('Overview suggest-edit link does not target apps/site/app/docs/page.mdx')
+  process.exit(1)
+}
+
 const eviction = read('docs/housing/illegal-eviction/index.html')
 if (!eviction.toLowerCase().includes('hard-escalate')) {
   console.error('Illegal eviction page is missing the hard-escalate callout')
