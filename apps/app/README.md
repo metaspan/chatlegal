@@ -46,6 +46,17 @@ The provider also sets `allowedRedirectOrigins` to `https://app.chatlegal.uk`. I
 
 CI compiles with a non-functional `pk_test_` / `sk_test_` placeholder so the build does not need a live Clerk instance. Those values are not a Clerk application.
 
+## Reverse proxy
+
+No extra env keys. Keep the absolute `NEXT_PUBLIC_CLERK_SIGN_*_URL` values in the table. Do not set `NEXT_PUBLIC_CLERK_IS_SATELLITE`.
+
+Ops runs the server on `127.0.0.1:3011`. Nginx terminates TLS and proxies with:
+
+- `Host: app.chatlegal.uk` (or `X-Forwarded-Host: app.chatlegal.uk`)
+- `X-Forwarded-Proto: https`
+
+`proxy.ts` does not rewrite or redirect that request to `localhost`, `127.0.0.1`, or `::1`. `/sign-in` and `/sign-up` render here. Unsigned `/` redirects to `/sign-in` on `https://app.chatlegal.uk`. A `pk_test_` key still cannot finish sign-in. Production `pk_live_` keys do not use Clerk's dev-browser handshake. `https://chatlegal.uk` stays the docs site.
+
 Create the Clerk application with **Organizations turned off**. This repo does not render an organisation switcher, team roles, or a workspace picker.
 
 ## What is wired
