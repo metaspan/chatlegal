@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { Library, PanelLeftClose, Plus, Search } from 'lucide-react'
+import { PlanUsageCard } from '@/components/shell/plan-usage-card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,6 +17,7 @@ import { cn } from '@/lib/utils'
  * hitly-net/hitly@94b2e92 apps/app/components/app-sidebar.tsx (icon, label, href).
  * File lists and the add form live on /library, not in this pane.
  * Each row is one matter, which is one chat thread.
+ * The plan card is pinned under the list so it stays in view while history scrolls.
  */
 export function HistoryPane({
   query,
@@ -121,6 +123,9 @@ export function HistoryPane({
             ))}
           </ul>
         ) : null}
+      </div>
+      <div data-plan-footer="" className="shrink-0 border-t px-3 py-3">
+        <PlanUsageCard />
       </div>
     </aside>
   )
