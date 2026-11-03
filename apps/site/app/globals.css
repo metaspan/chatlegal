@@ -12,7 +12,7 @@
   --shadow: 0 1px 0 rgba(34, 28, 22, 0.06);
   color-scheme: light;
   --top-offset: 3.5rem;
-  --footer-offset: 4.75rem;
+  --footer-offset: 2rem;
 }
 
 html[data-theme='dark'] {
