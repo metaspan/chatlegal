@@ -19,7 +19,7 @@ import type { MoveWorkspaceFileResult, WorkspaceFile, WorkspaceScope } from './t
  * The chat workspace in dcolley/tourbillon@7a8595b
  * packages/mastra/src/execution-workspace.ts (buildChatWorkspace) is a
  * Workspace plus LocalFilesystem, with tools left off. This app does the
- * same: no sandbox, no search index, and no agent. Send stays off.
+ * same: no sandbox, no search index, and no agent. Send does not use these files.
  * Containment stays on, so a path cannot leave its base directory.
  *
  * The library and each matter are separate workspaces. A file moves from

@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * Move one file between the signed-in user's library and a matter they own.
- * A later Concierge calls this. It does not run an agent, and Send stays off.
+ * A later Concierge calls this. It does not run an agent, and Send does not move a file.
  */
 export async function POST(request: Request) {
   const session = await requireConsumerSession()

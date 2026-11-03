@@ -5,7 +5,7 @@ import { LibSQLStore } from '@mastra/libsql'
 import { Memory } from '@mastra/memory'
 import { ensureMattersDatabaseDirectory, mattersDatabaseAuthToken, mattersDatabaseUrl } from './database-url'
 import { matterObservationSummary, matterObservationalMemoryConfig } from './observational-memory'
-import { matterMessageText, toIso } from './present'
+import { matterMessageText, matterMessageTools, toIso } from './present'
 import { MATTER_KIND, matterResourceId } from './resource'
 import { resolveMatterTitle } from './title'
 import type { MatterMessage, MatterObservations, MatterSummary, MatterThread } from './types'
@@ -166,12 +166,17 @@ export async function getMatterThread(
   })
   const messages = recalled.messages
     .filter((message) => message.role === 'user' || message.role === 'assistant')
-    .map((message) => ({
-      id: message.id,
-      role: message.role as MatterMessage['role'],
-      text: matterMessageText(message.content),
-      createdAt: toIso(message.createdAt),
-    }))
+    .map((message) => {
+      const role = message.role as MatterMessage['role']
+      const tools = role === 'assistant' ? matterMessageTools(message.content) : []
+      return {
+        id: message.id,
+        role,
+        text: matterMessageText(message.content),
+        createdAt: toIso(message.createdAt),
+        ...(tools.length > 0 ? { tools } : {}),
+      }
+    })
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id))
   return {
     matter: toSummary(thread),
@@ -202,8 +207,9 @@ async function readMatterObservations(
 
 /**
  * Records a message on a matter the user owns.
- * The composer does not call this yet: sending stays off until a model exists.
- * The centre pane reads whatever is already stored on the thread.
+ * The centre composer calls this for the user's own words.
+ * TODO(G-01 Concierge): stream the assistant reply after that message is stored.
+ * This function does not call a model.
  */
 export async function appendMatterMessage(
   store: MatterStore,

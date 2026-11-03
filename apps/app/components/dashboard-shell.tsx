@@ -48,7 +48,8 @@ function PaneRail({ side, children }: { side: 'left' | 'right'; children: ReactN
  * chevron from LiteLLM docs, without that brand. hitly-net/hitly@94b2e92
  * is a fumadocs layout and has no pane pin to adapt.
  * Personal accounts only. Matters are Mastra threads for the signed-in user.
- * Sending stays off until a model is connected.
+ * Send stores the user's words on the open matter. A reply is not written yet.
+ * TODO(G-01 Concierge): stream that reply.
  */
 export function DashboardShell({ children }: { children: ReactNode }) {
   const [leftOpen, setLeftOpen] = usePaneOpen(SHELL_LEFT_OPEN_KEY)
@@ -213,6 +214,26 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             const matterId = mattersSession.activeId
             if (!matterId) return
             setDrafts((current) => writeDraft(current, matterId, text))
+          }}
+          sending={mattersSession.sending}
+          sendError={mattersSession.sendError}
+          onNewChat={() => {
+            setQuery('')
+            void mattersSession.createMatterSession()
+          }}
+          creating={mattersSession.creating}
+          onSend={async (text) => {
+            const matterId = mattersSession.activeId
+            if (!matterId) return false
+            setDrafts((current) => writeDraft(current, matterId, ''))
+            const saved = await mattersSession.sendMessage(text)
+            if (!saved) {
+              setDrafts((current) => {
+                if (draftText(current, matterId).trim()) return current
+                return writeDraft(current, matterId, text)
+              })
+            }
+            return saved
           }}
         >
           {children}

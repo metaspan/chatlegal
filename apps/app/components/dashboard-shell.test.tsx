@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ChatColumn } from './chat/chat-column.tsx'
+import { composerSendsOnEnter } from '../lib/chat-composer.ts'
 import { DisclaimerBar } from './disclaimer-bar.tsx'
 import { DocumentViewer } from './shell/document-viewer.tsx'
 import { HistoryPane } from './shell/history-pane.tsx'
@@ -18,11 +19,21 @@ describe('dashboard shell', () => {
     const chat = renderToStaticMarkup(
       createElement(ChatColumn, {
         title: 'Deposit',
-        detail: 'No messages in this matter yet. Sending stays off until a model is connected.',
+        detail: 'Write what has happened, in your own words. It stays with this matter. This is not legal advice.',
         matterId: 'matter-1',
-        messages: [{ id: 'msg-1', role: 'user', text: 'When is the deadline?', createdAt: '2026-11-03T00:00:00.000Z' }],
+        messages: [
+          { id: 'msg-1', role: 'user', text: 'When is the deadline?', createdAt: '2026-11-03T00:00:00.000Z' },
+          {
+            id: 'msg-2',
+            role: 'assistant',
+            text: 'Here is what the notice says.',
+            createdAt: '2026-11-03T00:00:01.000Z',
+            tools: [{ name: 'search_sources' }],
+          },
+        ],
         draft: 'draft for this matter',
         onDraftChange: () => {},
+        onSend: () => true,
         threadStatus: 'ready',
         observations: { enabled: false, summary: 'The deposit deadline is Friday.' },
       }),
@@ -33,15 +44,40 @@ describe('dashboard shell', () => {
     assert.match(chat, /data-matter-id="matter-1"/)
     assert.match(chat, /data-draft-matter-id="matter-1"/)
     assert.match(chat, /When is the deadline\?/)
+    assert.match(chat, /Here is what the notice says/)
+    assert.match(chat, /data-tool-use="search_sources"/)
+    assert.match(chat, /Checked search sources\./)
+    assert.doesNotMatch(chat, /\{|args|json|toolCall/)
     assert.match(chat, /aria-label="Summary"/)
     assert.match(chat, /data-observation-matter-id="matter-1"/)
     assert.match(chat, /The deposit deadline is Friday\./)
     assert.match(chat, /only for the open matter/)
     assert.match(chat, /draft for this matter/)
     assert.match(chat, /data-slot="composer"/)
-    assert.match(chat, /This draft stays with this matter/)
+    assert.match(chat, /This stays with this matter/)
     assert.match(chat, />Send</)
-    assert.match(chat, /disabled/)
+    const sendButton = chat.match(/<button type="submit"[^>]*>/)?.[0] ?? ''
+    assert.equal(/\sdisabled(?:=|[>\s])/.test(sendButton), false)
+    assert.equal(composerSendsOnEnter({ key: 'Enter' }), true)
+    assert.equal(composerSendsOnEnter({ key: 'Enter', shiftKey: true }), false)
+
+    const emptyChat = renderToStaticMarkup(
+      createElement(ChatColumn, {
+        title: 'Start a matter',
+        detail: 'New chat opens a place for what is happening. Write it in your own words. This is not legal advice.',
+        matterId: null,
+        messages: [],
+        draft: '',
+        onDraftChange: () => {},
+        onNewChat: () => {},
+      }),
+    )
+    assert.match(emptyChat, /data-chat-empty/)
+    assert.match(emptyChat, /Start a matter/)
+    assert.match(emptyChat, /not legal advice/i)
+    assert.match(emptyChat, />New chat</)
+    assert.match(emptyChat, /disabled/)
+    assert.doesNotMatch(emptyChat, /I act for you|we advise/i)
 
     const viewer = renderToStaticMarkup(
       createElement(DocumentViewer, {
@@ -173,7 +209,10 @@ describe('dashboard shell', () => {
     assert.match(shell, /useLibrary/)
     assert.match(shell, /useMatterSessions/)
     assert.match(shell, /writeDraft/)
+    assert.match(shell, /sendMessage/)
+    assert.match(shell, /onSend=/)
     assert.match(shell, /ChatColumn/)
+    assert.doesNotMatch(shell, /Sending stays off/)
     assert.match(shell, /observations=\{mattersSession\.observations\}/)
     assert.match(shell, /DocumentViewer/)
     assert.match(shell, /DisclaimerBar/)

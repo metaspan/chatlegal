@@ -10,11 +10,22 @@ export type MatterSummary = {
   updatedAt: string
 }
 
+/**
+ * A tool the assistant used on this message.
+ * The name is enough for the centre pane. Arguments and results stay on the server.
+ */
+export type MatterToolUse = {
+  name: string
+}
+
 export type MatterMessage = {
   id: string
   role: 'user' | 'assistant'
   text: string
   createdAt: string
+  tools?: MatterToolUse[]
+  /** Set on a message that is on screen before the server has stored it. */
+  pending?: boolean
 }
 
 /**

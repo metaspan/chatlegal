@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import { mattersDatabaseAuthToken, mattersDatabaseUrl } from './database-url.ts'
 import { draftText, writeDraft } from './draft.ts'
 import { filterMatterHistory } from './filter.ts'
-import { isMatterObservations, matterHistoryDetail, matterMessageText, matterObservationCopy, matterThreadCopy } from './present.ts'
+import { MatterMessageError, messagesAfterReload, messagesWithSaved, parseMatterMessageBody, resolveMatterMessageText } from './message.ts'
+import { isMatterObservations, matterHistoryDetail, matterMessageText, matterMessageTools, matterObservationCopy, matterThreadCopy, toolUseLabel } from './present.ts'
 import { matterResourceId } from './resource.ts'
 import { MatterTitleError, resolveMatterTitle } from './title.ts'
 
@@ -86,13 +87,63 @@ describe('matter presentation', () => {
     assert.equal(matterMessageText(undefined), '')
   })
 
-  it('describes an empty thread and a missing matter without placeholder titles', () => {
-    assert.match(matterThreadCopy({ title: null, status: 'idle', messageCount: 0 }).detail, /New chat opens one/)
-    assert.match(
-      matterThreadCopy({ title: 'New chat', status: 'ready', messageCount: 0 }).detail,
-      /No messages in this matter yet/,
-    )
+  it('keeps tool names and drops arguments and JSON', () => {
+    const tools = matterMessageTools({
+      parts: [
+        { type: 'text', text: 'Here is what the notice says.' },
+        {
+          type: 'tool-invocation',
+          toolInvocation: { toolName: 'search_sources', args: { secret: 'do-not-show' } },
+        },
+        { type: 'tool-result', toolName: 'search_sources', result: { token: 'json-dump' } },
+        { type: 'tool-invocation', toolInvocation: { toolName: '{ "raw": true }' } },
+        { type: 'step-start' },
+      ],
+      toolInvocations: [{ toolName: 'lookupStatute' }],
+    })
+    assert.deepEqual(tools, [{ name: 'search_sources' }, { name: 'lookupStatute' }])
+    assert.equal(JSON.stringify(tools).includes('do-not-show'), false)
+    assert.equal(JSON.stringify(tools).includes('json-dump'), false)
+    assert.equal(toolUseLabel('search_sources'), 'Checked search sources.')
+    assert.equal(toolUseLabel('lookupStatute'), 'Checked lookup statute.')
+    assert.doesNotMatch(toolUseLabel('search_sources'), /\{|args|result/)
+  })
+
+  it('describes an empty thread as an invite, not as legal advice', () => {
+    const idle = matterThreadCopy({ title: null, status: 'idle', messageCount: 0 })
+    assert.equal(idle.title, 'Start a matter')
+    assert.match(idle.detail, /New chat opens a place/)
+    assert.match(idle.detail, /not legal advice/i)
+    assert.doesNotMatch(idle.detail, /I act for you|solicitor will|we advise/i)
+    const empty = matterThreadCopy({ title: 'New chat', status: 'ready', messageCount: 0 })
+    assert.match(empty.detail, /in your own words/)
+    assert.match(empty.detail, /not legal advice/i)
     assert.equal(matterThreadCopy({ title: 'Deposit', status: 'ready', messageCount: 2 }).title, 'Deposit')
+    assert.equal(matterThreadCopy({ title: 'Deposit', status: 'ready', messageCount: 2 }).detail, '')
+  })
+
+  it('refuses an empty or huge message and keeps a normal one', () => {
+    assert.equal(resolveMatterMessageText('  When is the deadline?  '), 'When is the deadline?')
+    assert.equal(parseMatterMessageBody('{"text":"Hello\\nthere"}'), 'Hello\nthere')
+    assert.throws(() => resolveMatterMessageText('   '), MatterMessageError)
+    assert.throws(() => resolveMatterMessageText('a'.repeat(8001)), MatterMessageError)
+    assert.throws(() => resolveMatterMessageText('bad\u0000name'), MatterMessageError)
+    assert.throws(() => parseMatterMessageBody('{"text":1}'), MatterMessageError)
+    assert.throws(() => parseMatterMessageBody('not json'), MatterMessageError)
+  })
+
+  it('keeps an in-flight send when a load finishes during it', () => {
+    const optimistic = {
+      id: 'local:1',
+      role: 'user' as const,
+      text: 'Hello',
+      createdAt: '2026-11-03T00:00:00.000Z',
+      pending: true,
+    }
+    assert.deepEqual(messagesAfterReload([optimistic], [], true), [optimistic])
+    assert.deepEqual(messagesAfterReload([optimistic], [], false), [])
+    const saved = { id: 'msg-1', role: 'user' as const, text: 'Hello', createdAt: '2026-11-03T00:00:01.000Z' }
+    assert.deepEqual(messagesWithSaved([optimistic], 'local:1', saved), [saved])
   })
 
   it('shows a summary only for the open matter', () => {
