@@ -23,7 +23,7 @@ export const navGroups: NavGroup[] = [
         href: '/docs/',
         status: 'draft',
         summary:
-          'Start here. Placeholder docs for housing, employment, consumer, and welfare topics, plus sources and referrals.',
+          'Start here. Five evaluation pages are draft information. The other pages are still placeholders. Not legal advice.',
       },
       {
         title: 'How it works',
@@ -42,21 +42,21 @@ export const navGroups: NavGroup[] = [
         href: '/docs/housing/',
         status: 'draft',
         summary:
-          'Placeholder hub for housing topics. Scope, instruments, and where to get help are not written yet.',
+          'Draft hub for housing in England and Wales. Possession notices and deposits are in the evaluation set. Not legal advice.',
         children: [
           {
             title: 'Possession notice',
             href: '/docs/housing/possession-notice/',
             status: 'eval:locked',
             summary:
-              'Placeholder. Possession notices are in the locked evaluation set. This page does not say whether a notice is valid.',
+              'Draft information on possession notices in England after 1 May 2026. Not a verdict on any notice.',
           },
           {
             title: 'Deposit',
             href: '/docs/housing/deposit/',
             status: 'eval:locked',
             summary:
-              'Placeholder. Tenancy deposits are in the locked evaluation set. This page does not advise on a deposit dispute.',
+              'Draft information on tenancy deposit protection in England. No award is calculated.',
           },
           {
             title: 'Disrepair',
@@ -95,14 +95,15 @@ export const navGroups: NavGroup[] = [
         title: 'Employment',
         href: '/docs/employment/',
         status: 'draft',
-        summary: 'Placeholder hub for employment topics. Scope and instruments are not written yet.',
+        summary:
+          'Draft hub for employment in England and Wales. Unpaid wages are in the evaluation set. Not legal advice.',
         children: [
           {
             title: 'Unpaid wages',
             href: '/docs/employment/unpaid-wages/',
             status: 'eval:locked',
             summary:
-              'Placeholder. Unpaid wages are in the locked evaluation set. This page does not calculate what anyone is owed.',
+              'Draft information on unpaid wages and the Acas clock. No deadline is calculated.',
           },
           {
             title: 'Dismissal',
@@ -135,14 +136,14 @@ export const navGroups: NavGroup[] = [
         href: '/docs/consumer/',
         status: 'draft',
         summary:
-          'Placeholder hub for consumer and debt topics. Scope and instruments are not written yet.',
+          'Draft hub for consumer and debt topics in England and Wales. Private parking is in the evaluation set.',
         children: [
           {
             title: 'Private parking',
             href: '/docs/consumer/private-parking/',
             status: 'eval:locked',
             summary:
-              'Placeholder. Private parking charges are in the locked evaluation set. This page does not say whether a charge is payable.',
+              'Draft information on private parking charges in England and Wales. Not a decision on whether to pay.',
           },
           {
             title: 'Council PCN',
@@ -175,14 +176,14 @@ export const navGroups: NavGroup[] = [
         href: '/docs/welfare/',
         status: 'draft',
         summary:
-          'Placeholder hub for welfare benefits topics. Scope and instruments are not written yet.',
+          'Draft hub for welfare in England. Universal Credit sanctions are in the evaluation set. Not legal advice.',
         children: [
           {
             title: 'Universal Credit sanction',
             href: '/docs/welfare/uc-sanction-mr/',
             status: 'eval:locked',
             summary:
-              'Placeholder. Universal Credit sanctions are in the locked evaluation set. This page does not advise on a sanction or a mandatory reconsideration.',
+              'Draft information on Universal Credit sanctions and mandatory reconsideration. No outcome is predicted.',
           },
           {
             title: 'PIP refusal',
@@ -315,8 +316,10 @@ export function findItem(href: string): NavItem | undefined {
   return flattenNav().find((item) => normaliseHref(item.href) === key)
 }
 
-export function statusLabel(status: PageStatus): 'Draft' | 'Planned' {
-  return status === 'planned' ? 'Planned' : 'Draft'
+export function statusLabel(status: PageStatus): 'Draft' | 'Planned' | 'Eval locked' {
+  if (status === 'planned') return 'Planned'
+  if (status === 'eval:locked') return 'Eval locked'
+  return 'Draft'
 }
 
 export function neighbours(href: string): { prev?: NavItem; next?: NavItem } {
@@ -336,7 +339,7 @@ export function renderLlmsTxt(): string {
     '',
     '> UK citizen legal-information pages for chatlegal.uk. Not a solicitor. Not legal advice.',
     '',
-    'Stub index (Hermes M1). Page bodies are placeholders. Curated law tables and the source allowlist are not rendered here yet.',
+    'Five evaluation leaves are draft copy from the gold notes. They are not counsel-reviewed. Other pages are still placeholders.',
     '',
     'Source: https://github.com/metaspan/chatlegal',
     '',
