@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, type CSSProperties } from 'react'
+import type { CSSProperties } from 'react'
 import { Activity, FileText, Image as ImageIcon, PanelRightClose, ScrollText } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatSidebarResizeHandle, useChatSidebarWidth } from '@/components/chat/chat-sidebar-resize'
 import { MatterSummary } from '@/components/shell/matter-summary'
-import { VIEWER_KINDS, VIEWER_KIND_LABELS, viewerPanelCopy, type ViewerKind } from '@/lib/viewer-kind'
+import { openedViewerLabel, type OpenedDocument } from '@/lib/right-pane'
+import type { ViewerKind } from '@/lib/viewer-kind'
 import type { MatterObservations, MatterThreadStatus } from '@/lib/matters/types'
 import { cn } from '@/lib/utils'
 
@@ -20,26 +21,31 @@ const KIND_ICONS: Record<ViewerKind, LucideIcon> = {
 /**
  * Right pane. Width drag is the docked-sidebar handle from
  * dcolley/tourbillon@7a8595b apps/web/components/chat/chat-sidebar-resize.tsx.
- * Chat state shows the open matter's summary. The other kinds stay placeholders.
+ * Resting content is chat state (the open matter's summary). A Markdown,
+ * image, PDF, or other file viewer renders only after one is opened, the
+ * same rule as workspace-file-pane.tsx in that pin: no path, no file body.
+ * Closing the file returns to chat state. The file text is not shown here.
  */
 export function DocumentViewer({
   onCollapse,
+  onDismiss,
   matterId = null,
   threadStatus = 'idle',
   observations = null,
-  initialKind = 'markdown',
+  document = null,
 }: {
   onCollapse: () => void
+  onDismiss: () => void
   matterId?: string | null
   threadStatus?: MatterThreadStatus
   observations?: MatterObservations | null
-  /** Tests open a tab directly. The shell leaves this unset. */
-  initialKind?: ViewerKind
+  /** Set only after an explicit open. Null is chat state. */
+  document?: OpenedDocument | null
 }) {
-  const [kind, setKind] = useState<ViewerKind>(initialKind)
   const { width, dragging, onResizePointerDown, onResizeKeyDown } = useChatSidebarWidth()
-  const copy = viewerPanelCopy(kind)
+  const kind: ViewerKind = document ? document.kind : 'chat-state'
   const Icon = KIND_ICONS[kind]
+  const heading = document ? document.name : 'Chat state'
 
   return (
     <aside
@@ -47,6 +53,7 @@ export function DocumentViewer({
       aria-label="Viewer"
       data-pane="viewer"
       data-viewer-kind={kind}
+      data-open-document={document?.name ?? ''}
       className={cn(
         'relative flex h-full shrink-0 flex-col border-l bg-sidebar text-sidebar-foreground',
         'max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-30 max-md:w-full max-md:max-w-sm max-md:shadow-lg',
@@ -62,50 +69,32 @@ export function DocumentViewer({
         onKeyDown={onResizeKeyDown}
       />
       <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
-        <h2 className="font-serif text-sm font-semibold">Viewer</h2>
-        <div className="flex-1" />
+        <h2 id="viewer-heading" className="min-w-0 flex-1 truncate font-serif text-sm font-semibold">
+          {heading}
+        </h2>
+        {document ? (
+          <Button type="button" variant="ghost" size="sm" aria-label="Close document" onClick={onDismiss}>
+            Close
+          </Button>
+        ) : null}
         <Button type="button" variant="ghost" size="icon-sm" aria-label="Hide viewer" onClick={onCollapse}>
           <PanelRightClose />
         </Button>
       </header>
-      <div role="tablist" aria-label="What to show" className="flex flex-wrap gap-1 border-b px-3 py-2">
-        {VIEWER_KINDS.map((item) => {
-          const selected = item === kind
-          return (
-            <button
-              key={item}
-              type="button"
-              role="tab"
-              id={`viewer-tab-${item}`}
-              aria-selected={selected}
-              aria-controls="viewer-panel"
-              onClick={() => setKind(item)}
-              className={cn(
-                'rounded-md px-2 py-1 text-xs font-medium',
-                selected ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground hover:bg-muted',
-              )}
-            >
-              {VIEWER_KIND_LABELS[item]}
-            </button>
-          )
-        })}
-      </div>
-      <div
-        id="viewer-panel"
-        role="tabpanel"
-        aria-labelledby={`viewer-tab-${kind}`}
-        className="flex flex-1 flex-col gap-3 overflow-y-auto p-4"
-      >
+      <div id="viewer-panel" aria-labelledby="viewer-heading" className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
         <div className="flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
           <Icon className="size-5" />
         </div>
-        {kind === 'chat-state' ? (
-          <MatterSummary matterId={matterId} status={threadStatus} observations={observations} />
-        ) : (
+        {document ? (
           <>
-            <h3 className="font-serif text-lg font-semibold">{copy.heading}</h3>
-            <p className="text-sm text-muted-foreground">{copy.body}</p>
+            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              {openedViewerLabel(document.name, document.kind)}
+            </p>
+            <h3 className="font-serif text-lg font-semibold break-words">{document.name}</h3>
+            <p className="text-sm text-muted-foreground">This file is open in the viewer.</p>
           </>
+        ) : (
+          <MatterSummary matterId={matterId} status={threadStatus} observations={observations} />
         )}
       </div>
     </aside>

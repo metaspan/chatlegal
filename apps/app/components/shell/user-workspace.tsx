@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { File, FileCode, FileJson, FileText, Search } from 'lucide-react'
+import { useRightPaneActions } from '@/components/shell/right-pane-actions'
 import { useLibrary } from '@/components/shell/use-library'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +18,8 @@ import { cn } from '@/lib/utils'
  * apps/web/components/workspace/workspace-file-pane.tsx.
  * Files stay flat: ChatLegal library names are one segment, via /api/library.
  * Moving a file into a matter stays on /api/workspace/move for a later pass.
+ * Open sends the selected file to the right pane. This column keeps the name
+ * and size only. The file text stays out of both places.
  */
 
 function FileTypeIcon({ name }: { name: string }) {
@@ -47,13 +50,19 @@ function updatedLabel(updatedAt: string): string {
 export function UserWorkspace({
   initialFiles,
   initialError = null,
+  initialSelectedName = null,
+  onOpenFile,
 }: {
   initialFiles: readonly WorkspaceFile[]
   initialError?: string | null
+  /** Tests select a row without a click. The page leaves this unset. */
+  initialSelectedName?: string | null
+  onOpenFile?: (file: { name: string; scope: 'user' }) => void
 }) {
   const library = useLibrary(null, { files: initialFiles, error: initialError })
+  const rightPane = useRightPaneActions()
   const [query, setQuery] = useState('')
-  const [selectedName, setSelectedName] = useState<string | null>(null)
+  const [selectedName, setSelectedName] = useState<string | null>(initialSelectedName)
   const [name, setName] = useState('')
   const [text, setText] = useState('')
   const needle = query.trim().toLowerCase()
@@ -135,6 +144,21 @@ export function UserWorkspace({
               <p className="text-xs text-muted-foreground">
                 {selected.size} bytes · {updatedLabel(selected.updatedAt)}
               </p>
+              <div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-label={`Open ${selected.name}`}
+                  onClick={() => {
+                    const request = { name: selected.name, scope: 'user' as const }
+                    onOpenFile?.(request)
+                    rightPane?.openDocument(request)
+                  }}
+                >
+                  Open
+                </Button>
+              </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Select a file from the list to see it.</p>

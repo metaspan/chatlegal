@@ -1,5 +1,8 @@
 /**
- * Right-pane viewer kinds. Each one is a stub until a document is opened.
+ * Right-pane viewer kinds.
+ * Chat state is the resting view. Markdown, image, and PDF are shown only
+ * after a file is opened (see lib/right-pane.ts). Each document kind stays
+ * a stub: the file text is not rendered here.
  */
 
 export const VIEWER_KINDS = ['markdown', 'image', 'pdf', 'chat-state'] as const
