@@ -11,6 +11,7 @@ import { basicPlanUsage, type PlanUsageStub } from '@/lib/plan-usage'
  * That card's billing props are not used. The panel is components/ui/card.tsx,
  * adapted from dcolley/tourbillon@7a8595b apps/web/components/ui/card.tsx.
  * Colours stay on the M1 tokens.
+ * The tier line names the default class. It is not a class picker.
  */
 export function PlanUsageCard({ plan = basicPlanUsage }: { plan?: PlanUsageStub }) {
   return (
@@ -21,6 +22,8 @@ export function PlanUsageCard({ plan = basicPlanUsage }: { plan?: PlanUsageStub 
       data-plan-card=""
       data-plan-tier={plan.tierName}
       data-plan-price={plan.priceLabel}
+      data-plan-model-class={plan.modelClassId}
+      data-plan-model-id={plan.modelId}
       data-plan-remaining={plan.remainingKind}
       data-upgrade-available={plan.upgradeAvailable ? 'true' : 'false'}
       className="border bg-background shadow-none ring-0"
@@ -32,6 +35,10 @@ export function PlanUsageCard({ plan = basicPlanUsage }: { plan?: PlanUsageStub 
             <CardTitle>
               <h2 className="font-serif text-sm font-semibold">{plan.tierName}</h2>
             </CardTitle>
+            <p className="mt-0.5 text-xs text-muted-foreground" data-slot="model-class">
+              <span className="sr-only">Default model class </span>
+              {plan.modelClassAffordance}
+            </p>
           </div>
           <Badge variant="secondary">{plan.priceLabel}</Badge>
         </div>
