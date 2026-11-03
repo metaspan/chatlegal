@@ -100,16 +100,18 @@ export function ChatSidebarResizeHandle({
   onPointerDown,
   onKeyDown,
   dragging,
+  ariaLabel = 'Resize chat pane',
 }: {
   onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
   dragging: boolean;
+  ariaLabel?: string;
 }) {
   return (
     <div
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize chat pane"
+      aria-label={ariaLabel}
       tabIndex={0}
       onPointerDown={onPointerDown}
       onKeyDown={onKeyDown}
