@@ -318,6 +318,10 @@ a:hover { text-decoration-thickness: 2px; }
 
 .prose p { margin: 0.75rem 0; }
 
+.prose ul { margin: 0.4rem 0 0.9rem; padding-left: 1.2rem; }
+
+.prose li { margin: 0.28rem 0; }
+
 .child-links li,
 .top-links li {
   display: flex;
