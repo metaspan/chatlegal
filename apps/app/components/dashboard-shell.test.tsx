@@ -126,70 +126,38 @@ describe('dashboard shell', () => {
 
     const history = renderToStaticMarkup(
       createElement(HistoryPane, {
-        query: '',
-        onQueryChange: () => {},
+        ...historyProps(),
         matters: [{ id: 'matter-1', title: 'Deposit', detail: 'Opened 3 Nov 2026' }],
-        loaded: true,
-        listError: null,
         activeId: 'matter-1',
-        onSelect: () => {},
-        onNewChat: () => {},
-        creating: false,
-        onCollapse: () => {},
-        ...libraryProps({
-          libraryFiles: [{ name: 'notice.txt', size: 4, updatedAt: '2026-11-03T00:00:00.000Z' }],
-          matterFiles: [{ name: 'reply.txt', size: 5, updatedAt: '2026-11-03T00:00:00.000Z' }],
-        }),
       }),
     )
     assert.match(history, /Search/)
     assert.match(history, /New chat/)
     assert.match(history, /Library/)
+    assert.match(history, /href="\/library"/)
+    assert.match(history, /data-library-nav/)
     assert.match(history, /History/)
-    assert.match(history, /data-library-file="notice.txt"/)
-    assert.match(history, /Move notice\.txt to this matter/)
-    assert.match(history, /data-matter-files="matter-1"/)
-    assert.match(history, /data-matter-file="reply.txt"/)
-    assert.match(history, /Move reply\.txt to your library/)
-    assert.match(history, /Add a file/)
+    assert.doesNotMatch(history, /data-library-file|data-matter-file|data-library-scope|Add a file|File name|Move to/)
     assert.doesNotMatch(history, /No files yet/)
     assert.match(history, /One matter is one chat/)
     assert.match(history, /Deposit/)
     assert.match(history, /data-matter-id="matter-1"/)
     assert.doesNotMatch(history, /Chat title|Matter title|Placeholder/)
 
-    const emptyHistory = renderToStaticMarkup(
-      createElement(HistoryPane, {
-        query: '',
-        onQueryChange: () => {},
-        matters: [],
-        loaded: true,
-        listError: null,
-        activeId: null,
-        onSelect: () => {},
-        onNewChat: () => {},
-        creating: false,
-        onCollapse: () => {},
-        ...libraryProps(),
-      }),
-    )
+    const libraryLink = renderToStaticMarkup(createElement(HistoryPane, { ...historyProps(), libraryActive: true }))
+    assert.match(libraryLink, /href="\/library"/)
+    assert.match(libraryLink, /aria-current="page"/)
+    assert.match(libraryLink, />Library</)
+
+    const emptyHistory = renderToStaticMarkup(createElement(HistoryPane, historyProps()))
     assert.match(emptyHistory, /No matters yet/)
-    assert.match(emptyHistory, /No files yet/)
-    assert.match(emptyHistory, /Open a matter to see its files/)
+    assert.match(emptyHistory, /href="\/library"/)
+    assert.doesNotMatch(emptyHistory, /No files yet|Open a matter to see its files|Add a file/)
 
     const failedHistory = renderToStaticMarkup(
       createElement(HistoryPane, {
-        query: '',
-        onQueryChange: () => {},
-        matters: [],
-        loaded: true,
+        ...historyProps(),
         listError: 'Matters could not be loaded.',
-        activeId: null,
-        onSelect: () => {},
-        onNewChat: () => {},
-        creating: false,
-        onCollapse: () => {},
-        ...libraryProps(),
       }),
     )
     assert.match(failedHistory, /Matters could not be loaded/)
@@ -289,7 +257,9 @@ describe('dashboard shell', () => {
     const bar = fs.readFileSync(path.join(here, 'shell/app-bar.tsx'), 'utf8')
     const combined = shell + bar
     assert.match(shell, /HistoryPane/)
-    assert.match(shell, /useLibrary/)
+    assert.match(shell, /libraryActive=\{pathname === '\/library'\}/)
+    assert.match(shell, /usePathname/)
+    assert.doesNotMatch(shell, /useLibrary|onAddFile|onMoveToMatter/)
     assert.match(shell, /useMatterSessions/)
     assert.match(shell, /writeDraft/)
     assert.match(shell, /sendMessage/)
@@ -344,19 +314,17 @@ describe('dashboard shell', () => {
   })
 })
 
-function libraryProps(overrides: Record<string, unknown> = {}) {
+function historyProps() {
   return {
-    libraryFiles: [],
-    libraryLoaded: true,
-    libraryError: null,
-    addingFile: false,
-    onAddFile: () => true,
-    matterFiles: [],
-    matterFilesLoaded: true,
-    matterFilesError: null,
-    movingName: null,
-    onMoveToMatter: () => {},
-    onMoveToLibrary: () => {},
-    ...overrides,
+    query: '',
+    onQueryChange: () => {},
+    matters: [] as { id: string; title: string; detail: string }[],
+    loaded: true,
+    listError: null,
+    activeId: null,
+    onSelect: () => {},
+    onNewChat: () => {},
+    creating: false,
+    onCollapse: () => {},
   }
 }

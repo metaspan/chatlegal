@@ -23,6 +23,7 @@ function textOf(node: unknown): string {
 
 const pages = [
   { title: 'home', module: '../app/(app)/page.tsx' },
+  { title: 'library', module: '../app/(app)/library/page.tsx' },
   { title: 'matters', module: '../app/(app)/matters/page.tsx' },
   { title: 'work', module: '../app/(app)/work/page.tsx' },
 ]

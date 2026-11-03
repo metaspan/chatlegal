@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import { ChatColumn } from '@/components/chat/chat-column'
 import { DisclaimerBar } from '@/components/disclaimer-bar'
 import { AppBar } from '@/components/shell/app-bar'
 import { DocumentViewer } from '@/components/shell/document-viewer'
 import { HistoryPane } from '@/components/shell/history-pane'
 import { PaneEdgeToggle } from '@/components/shell/pane-edge-toggle'
-import { useLibrary } from '@/components/shell/use-library'
 import { useMatterSessions } from '@/components/shell/use-matter-sessions'
 import { usePaneOpen } from '@/components/shell/use-pane-open'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -58,10 +58,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [mobileRight, setMobileRight] = useState(false)
   const [mounted, setMounted] = useState(false)
   const focusChatsOnOpen = useRef(false)
+  const pathname = usePathname()
   const [query, setQuery] = useState('')
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const mattersSession = useMatterSessions()
-  const library = useLibrary(mattersSession.activeId)
   const isMobile = useIsMobile()
   const copy = matterThreadCopy({
     title: mattersSession.active?.title ?? null,
@@ -178,17 +178,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               }}
               creating={mattersSession.creating}
               onCollapse={() => (narrow ? setMobileLeft(false) : setLeftOpen(false))}
-              libraryFiles={library.files}
-              libraryLoaded={library.loaded}
-              libraryError={library.error}
-              addingFile={library.adding}
-              onAddFile={library.addFile}
-              matterFiles={library.matterFiles}
-              matterFilesLoaded={library.matterLoaded}
-              matterFilesError={library.matterError}
-              movingName={library.movingName}
-              onMoveToMatter={library.moveToMatter}
-              onMoveToLibrary={library.moveToLibrary}
+              libraryActive={pathname === '/library'}
             />
             {leftOpen ? (
               <div className="absolute top-14 -right-3 z-30 hidden md:block">

@@ -32,6 +32,7 @@ describe('Consumer route gate', () => {
     assert.deepEqual(calls, [])
     for (const pathname of [
       '/',
+      '/library',
       '/matters',
       '/work',
       '/work/later',
@@ -43,7 +44,7 @@ describe('Consumer route gate', () => {
     ]) {
       await protectSignedInRoute(pathname, auth)
     }
-    assert.equal(calls.length, 9)
+    assert.equal(calls.length, 10)
   })
 
   it('wires clerkMiddleware to the route gate and keeps the Frontend API matcher', () => {
