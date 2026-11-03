@@ -11,6 +11,14 @@ import { DisclaimerBar } from './disclaimer-bar.tsx'
 import { DocumentViewer } from './shell/document-viewer.tsx'
 import { HistoryPane } from './shell/history-pane.tsx'
 import { PaneEdgeToggle } from './shell/pane-edge-toggle.tsx'
+import {
+  defaultRightPaneView,
+  dismissRightPaneDocument,
+  openRightPaneDocument,
+  rightPaneKind,
+  type RightPaneView,
+} from '../lib/right-pane.ts'
+import type { MatterObservations } from '../lib/matters/types.ts'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 
@@ -79,47 +87,60 @@ describe('dashboard shell', () => {
     assert.match(emptyChat, /disabled/)
     assert.doesNotMatch(emptyChat, /I act for you|we advise/i)
 
-    const viewer = renderToStaticMarkup(
-      createElement(DocumentViewer, {
-        onCollapse: () => {},
-        matterId: 'matter-1',
-        threadStatus: 'ready',
-        observations: { enabled: true, summary: 'The deposit deadline is Friday.' },
-      }),
-    )
+    let pane = defaultRightPaneView()
+    assert.equal(rightPaneKind(pane), 'chat-state')
+    const viewer = renderViewer(pane)
     assert.match(viewer, /aria-label="Viewer"/)
     assert.match(viewer, /Resize viewer/)
     assert.match(viewer, /--viewer-pane-width:448px/)
-    assert.match(viewer, /Markdown/)
-    assert.match(viewer, /Image/)
-    assert.match(viewer, /PDF/)
+    assert.match(viewer, /data-viewer-kind="chat-state"/)
     assert.match(viewer, /Chat state/)
-    assert.match(viewer, /No document is open/)
-    assert.doesNotMatch(viewer, /The deposit deadline is Friday/)
+    assert.match(viewer, /aria-label="Summary"/)
+    assert.match(viewer, /data-observation-matter-id="matter-1"/)
+    assert.match(viewer, /The deposit deadline is Friday\./)
+    assert.doesNotMatch(viewer, /No document is open/)
+    assert.doesNotMatch(viewer, /This file is open in the viewer/)
+    assert.doesNotMatch(viewer, /role="tablist"/)
+    assert.doesNotMatch(viewer, /data-open-document="[^"]+"/)
 
-    const chatState = renderToStaticMarkup(
-      createElement(DocumentViewer, {
-        onCollapse: () => {},
-        matterId: 'matter-1',
-        threadStatus: 'ready',
-        observations: { enabled: true, summary: 'The deposit deadline is Friday.' },
-        initialKind: 'chat-state',
-      }),
-    )
-    assert.match(chatState, /data-viewer-kind="chat-state"/)
-    assert.match(chatState, /data-observation-matter-id="matter-1"/)
-    assert.match(chatState, /The deposit deadline is Friday\./)
-    assert.doesNotMatch(chatState, /No document is open/)
+    pane = openRightPaneDocument({ name: 'notice.pdf', scope: 'user' })
+    assert.equal(rightPaneKind(pane), 'pdf')
+    const opened = renderViewer(pane)
+    assert.match(opened, /data-viewer-kind="pdf"/)
+    assert.match(opened, /data-open-document="notice.pdf"/)
+    assert.match(opened, /notice\.pdf/)
+    assert.match(opened, />\s*PDF\s*</)
+    assert.match(opened, /This file is open in the viewer/)
+    assert.match(opened, /aria-label="Close document"/)
+    assert.doesNotMatch(opened, /The deposit deadline is Friday/)
+    assert.doesNotMatch(opened, /No document is open/)
+    assert.doesNotMatch(opened, /role="tablist"/)
 
-    const emptySummary = renderToStaticMarkup(
-      createElement(DocumentViewer, {
-        onCollapse: () => {},
-        matterId: 'matter-2',
-        threadStatus: 'ready',
-        observations: { enabled: false, summary: '' },
-        initialKind: 'chat-state',
-      }),
-    )
+    const markdown = renderViewer(openRightPaneDocument({ name: 'letter.md', scope: 'user' }))
+    assert.match(markdown, /data-viewer-kind="markdown"/)
+    assert.match(markdown, />\s*Markdown\s*</)
+    const image = renderViewer(openRightPaneDocument({ name: 'photo.png', scope: 'user' }))
+    assert.match(image, /data-viewer-kind="image"/)
+    assert.match(image, />\s*Image\s*</)
+    const other = renderViewer(openRightPaneDocument({ name: 'notes.txt', scope: 'user' }))
+    assert.match(other, /data-viewer-kind="markdown"/)
+    assert.match(other, />\s*File\s*</)
+    assert.doesNotMatch(other, />\s*Markdown\s*</)
+
+    pane = dismissRightPaneDocument()
+    assert.equal(rightPaneKind(pane), 'chat-state')
+    assert.equal(pane.document, null)
+    const restored = renderViewer(pane)
+    assert.match(restored, /data-viewer-kind="chat-state"/)
+    assert.match(restored, /The deposit deadline is Friday\./)
+    assert.doesNotMatch(restored, /notice\.pdf/)
+    assert.doesNotMatch(restored, /This file is open in the viewer/)
+    assert.doesNotMatch(restored, /aria-label="Close document"/)
+
+    const emptySummary = renderViewer(defaultRightPaneView(), {
+      matterId: 'matter-2',
+      observations: { enabled: false, summary: '' },
+    })
     assert.match(emptySummary, /No summary for this matter yet/)
     assert.match(emptySummary, /data-observation-enabled="false"/)
     assert.doesNotMatch(emptySummary, /Friday/)
@@ -259,7 +280,6 @@ describe('dashboard shell', () => {
     assert.match(shell, /HistoryPane/)
     assert.match(shell, /libraryActive=\{pathname === '\/library'\}/)
     assert.match(shell, /usePathname/)
-    assert.doesNotMatch(shell, /useLibrary|onAddFile|onMoveToMatter/)
     assert.match(shell, /useMatterSessions/)
     assert.match(shell, /writeDraft/)
     assert.match(shell, /sendMessage/)
@@ -270,6 +290,14 @@ describe('dashboard shell', () => {
     assert.doesNotMatch(shell, /Sending stays off/)
     assert.match(shell, /observations=\{mattersSession\.observations\}/)
     assert.match(shell, /DocumentViewer/)
+    assert.match(shell, /RightPaneActionsProvider/)
+    assert.match(shell, /defaultRightPaneView/)
+    assert.match(shell, /openRightPaneDocument/)
+    assert.match(shell, /dismissRightPaneDocument/)
+    assert.match(shell, /retainOpenedDocument/)
+    assert.match(shell, /document=\{rightPane\.document\}/)
+    assert.match(shell, /onDismiss=\{dismissDocument\}/)
+    assert.doesNotMatch(shell, /initialKind|useLibrary|onAddFile|onMoveToMatter/)
     assert.match(shell, /DisclaimerBar/)
     assert.match(shell, /data-chat-resize-root/)
     assert.match(shell, /data-shell="three-pane"/)
@@ -327,4 +355,20 @@ function historyProps() {
     creating: false,
     onCollapse: () => {},
   }
+}
+
+function renderViewer(
+  view: RightPaneView,
+  options: { matterId?: string; observations?: MatterObservations } = {},
+) {
+  return renderToStaticMarkup(
+    createElement(DocumentViewer, {
+      onCollapse: () => {},
+      onDismiss: () => {},
+      matterId: options.matterId ?? 'matter-1',
+      threadStatus: 'ready',
+      observations: options.observations ?? { enabled: true, summary: 'The deposit deadline is Friday.' },
+      document: view.document,
+    }),
+  )
 }

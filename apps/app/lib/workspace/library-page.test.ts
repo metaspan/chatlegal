@@ -55,5 +55,22 @@ describe('library page', () => {
     assert.match(html, /id="library-file-name"/)
     assert.match(html, /Select a file from the list to see it/)
     assert.doesNotMatch(html, /Move to/)
+    assert.doesNotMatch(html, /aria-label="Open notice.txt"/)
+  })
+
+  it('opens a selected library file on request without showing its text', () => {
+    const html = renderToStaticMarkup(
+      createElement(UserWorkspace, {
+        initialFiles: [{ name: 'notice.txt', size: 22, updatedAt: '2026-11-03T00:00:00.000Z' }],
+        initialSelectedName: 'notice.txt',
+      }),
+    )
+    assert.match(html, /data-library-open="notice.txt"/)
+    assert.match(html, /aria-label="Open notice.txt"/)
+    assert.match(html, /22 bytes/)
+    assert.doesNotMatch(html, /Select a file from the list to see it/)
+    assert.doesNotMatch(html, /This file is open in the viewer/)
+    const source = fs.readFileSync(new URL('../../components/shell/user-workspace.tsx', import.meta.url), 'utf8')
+    assert.match(source, /openDocument/)
   })
 })

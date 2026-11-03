@@ -8,11 +8,19 @@ import { AppBar } from '@/components/shell/app-bar'
 import { DocumentViewer } from '@/components/shell/document-viewer'
 import { HistoryPane } from '@/components/shell/history-pane'
 import { PaneEdgeToggle } from '@/components/shell/pane-edge-toggle'
+import { RightPaneActionsProvider, type RightPaneOpenRequest } from '@/components/shell/right-pane-actions'
 import { useMatterSessions } from '@/components/shell/use-matter-sessions'
 import { usePaneOpen } from '@/components/shell/use-pane-open'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { draftText, writeDraft } from '@/lib/matters/draft'
 import { matterHistoryDetail, matterThreadCopy } from '@/lib/matters/present'
+import {
+  defaultRightPaneView,
+  dismissRightPaneDocument,
+  openRightPaneDocument,
+  retainOpenedDocument,
+  type RightPaneView,
+} from '@/lib/right-pane'
 import { SHELL_LEFT_OPEN_KEY, SHELL_RIGHT_OPEN_KEY, escapeRestoresLeftPane } from '@/lib/shell-layout'
 import { cn } from '@/lib/utils'
 
@@ -49,7 +57,10 @@ function PaneRail({ side, children }: { side: 'left' | 'right'; children: ReactN
  * is a fumadocs layout and has no pane pin to adapt.
  * Personal accounts only. Matters are Mastra threads for the signed-in user.
  * Send stores the user's words on the open matter. A reply is not written yet.
- * TODO(G-01 Concierge): stream that reply.
+ * TODO(G-01 Concierge): stream that reply. The same open path can show a file
+ * when Concierge asks; until then Open on a library file does it.
+ * The right pane rests on chat state (dcolley/tourbillon@7a8595b
+ * apps/web/components/chat/chat-context.tsx docks chat on the right).
  */
 export function DashboardShell({ children }: { children: ReactNode }) {
   const [leftOpen, setLeftOpen] = usePaneOpen(SHELL_LEFT_OPEN_KEY)
@@ -62,6 +73,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [query, setQuery] = useState('')
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const mattersSession = useMatterSessions()
+  const [rightPane, setRightPane] = useState<RightPaneView>(() => defaultRightPaneView())
+  const activeMatterId = mattersSession.activeId
   const isMobile = useIsMobile()
   const copy = matterThreadCopy({
     title: mattersSession.active?.title ?? null,
@@ -77,6 +90,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    setRightPane((current) => retainOpenedDocument(current, activeMatterId))
+  }, [activeMatterId])
 
   useEffect(() => {
     if (!focusChatsOnOpen.current || !leftOpen || narrow) return
@@ -117,6 +134,26 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     setLeftOpen(!leftOpen)
   }
 
+  function showDocument(file: RightPaneOpenRequest) {
+    setRightPane(
+      openRightPaneDocument({
+        name: file.name,
+        scope: file.scope,
+        matterId: file.scope === 'matter' ? activeMatterId : null,
+      }),
+    )
+    if (narrow) {
+      setMobileLeft(false)
+      setMobileRight(true)
+      return
+    }
+    setRightOpen(true)
+  }
+
+  function dismissDocument() {
+    setRightPane(dismissRightPaneDocument())
+  }
+
   function toggleRight() {
     if (narrow) {
       setMobileRight((open) => {
@@ -129,6 +166,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }
 
   return (
+    <RightPaneActionsProvider value={{ openDocument: showDocument, dismissDocument }}>
     <div className="flex h-svh flex-col overflow-hidden bg-background text-foreground" data-shell="three-pane">
       <a
         href="#chat-thread"
@@ -244,6 +282,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               matterId={mattersSession.activeId}
               threadStatus={mattersSession.threadStatus}
               observations={mattersSession.observations}
+              document={rightPane.document}
+              onDismiss={dismissDocument}
               onCollapse={() => (narrow ? setMobileRight(false) : setRightOpen(false))}
             />
           </div>
@@ -256,5 +296,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       </div>
       <DisclaimerBar />
     </div>
+    </RightPaneActionsProvider>
   )
 }
