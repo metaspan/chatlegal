@@ -41,6 +41,8 @@ See [`.env.example`](.env.example).
 | `NEXT_PUBLIC_CLERK_API_URL` | Optional Backend API origin. Default `https://api.clerk.com` |
 | `CHATLEGAL_MATTERS_DB` | Optional. Default is a local libSQL file, `data/matters.db`, in the app working directory. On the host set `file:/var/lib/chatlegal/matters.db` so a new release does not wipe matters. A `libsql://` URL is the remote move |
 | `CHATLEGAL_MATTERS_AUTH_TOKEN` | Optional. Only for a remote libSQL URL. Leave unset for the local file |
+| `CHATLEGAL_OM_ENABLED` | Optional. The word `true` turns on observational memory. Anything else, including unset, leaves it off |
+| `CHATLEGAL_OM_MODEL` | Required when observational memory is on. A Mastra model id such as `openai/gpt-4.1-mini`. If this is empty, observational memory stays off. Mastra's Gemini default is not used |
 
 The provider also sets `allowedRedirectOrigins` to `https://app.chatlegal.uk`. In the Clerk Dashboard, allowed origins and redirect URLs are that origin only. Do not add `https://chatlegal.uk`.
 
@@ -70,6 +72,7 @@ Create the Clerk application with **Organizations turned off**. This repo does n
 - Sign-out returns to `https://app.chatlegal.uk/sign-in`.
 - The home page shows the Clerk user id and session id when a session exists.
 - New chat creates a matter thread in Mastra memory (`@mastra/core` 1.78.0, `@mastra/memory` 1.36.0, `@mastra/libsql` 1.26.2). The left pane lists those threads. Opening a row loads that thread into the centre. The composer draft stays in client state under the open matter id. Send stays disabled.
+- Each matter can keep a summary in Mastra observational memory, scoped to that thread (`clerk:<userId>` plus the matter id). The centre column and the viewer's Chat state show that summary for the open matter. Another matter's summary is not loaded. The observer model stays off unless `CHATLEGAL_OM_ENABLED` is `true` and `CHATLEGAL_OM_MODEL` is set, so opening a matter does not call a model.
 
 ## Shell
 
@@ -79,17 +82,20 @@ Signed-in pages use three panes. The left and right panes can be hidden. That ch
 |---|---|
 | App bar | ChatLegal, show or hide each side pane, colour theme, Clerk account, sign out |
 | Left | Search, New chat, Library, and the signed-in user's matters. Empty until the first new chat |
-| Centre | The open matter's thread and a text box. The draft is kept with that matter. Sending stays off. `/` also shows the signed-in session |
-| Right | Viewer placeholders for Markdown, an image, a PDF, and chat state |
+| Centre | The open matter's thread, its summary, and a text box. The draft is kept with that matter. Sending stays off. `/` also shows the signed-in session |
+| Right | Viewer placeholders for Markdown, an image, and a PDF. Chat state shows the open matter's summary |
 
 The product disclaimer stays under the panes. `/matters` and `/work` still exist; their short notes render above the thread.
 
 Matters are stored with `@mastra/libsql` in a local SQLite file. No database secret is required. Set `CHATLEGAL_MATTERS_DB` to a durable path on the host. To move off the file later, point that variable at a `libsql://` URL and set `CHATLEGAL_MATTERS_AUTH_TOKEN`, or replace `LibSQLStore` with `@mastra/pg`. Threads stay keyed by `clerk:<userId>` with metadata `kind: matter`.
 
+Observational memory uses that same file. The Memory instance is created with `scope: 'thread'` and `retrieval: false`. A summary is read with the matter id, so a resource-wide row is not shown. Until `CHATLEGAL_OM_ENABLED` and `CHATLEGAL_OM_MODEL` are set, the observer does not run. A summary already stored for that matter is still shown. Opening a matter does not call a model, and Send stays off.
+
 ## Deferred
 
 - Clerk Organizations, seats, and workspace switching.
-- A model, so the composer can send. Observational memory and workspace files.
+- A model, so the composer can send. Turning on `CHATLEGAL_OM_MODEL` lets the observer write a summary later. It does not enable Send.
+- Workspace files.
 - AG-UI chat, widgets, TaskRunner, and HITL `ask_user`.
 - `hitly-net/hitl-spec@3410eda` schemas are not vendored yet.
 

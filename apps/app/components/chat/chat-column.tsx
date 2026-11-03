@@ -2,9 +2,10 @@
 
 import type { FormEvent, MouseEvent, ReactNode } from 'react'
 import { Send } from 'lucide-react'
+import { MatterSummary } from '@/components/shell/matter-summary'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import type { MatterMessage } from '@/lib/matters/types'
+import type { MatterMessage, MatterObservations, MatterThreadStatus } from '@/lib/matters/types'
 
 /**
  * Centre column: the open matter's thread plus a text box.
@@ -20,6 +21,8 @@ export function ChatColumn({
   messages,
   draft,
   onDraftChange,
+  threadStatus = 'idle',
+  observations = null,
   children,
 }: {
   title: string
@@ -28,6 +31,8 @@ export function ChatColumn({
   messages: readonly MatterMessage[]
   draft: string
   onDraftChange: (text: string) => void
+  threadStatus?: MatterThreadStatus
+  observations?: MatterObservations | null
   children?: ReactNode
 }) {
   return (
@@ -43,6 +48,7 @@ export function ChatColumn({
         <div id="chat-thread" className="flex flex-col gap-3 px-4 py-6 md:px-6">
           <h1 className="font-serif text-xl font-semibold tracking-tight">{title}</h1>
           <p className="max-w-prose text-sm text-muted-foreground">{detail}</p>
+          <MatterSummary matterId={matterId} status={matterId ? threadStatus : 'idle'} observations={observations} />
           {messages.length > 0 ? (
             <ol className="flex max-w-prose flex-col gap-3" aria-label="Messages">
               {messages.map((message) => (

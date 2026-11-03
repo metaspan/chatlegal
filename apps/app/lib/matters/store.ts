@@ -1,13 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import type { MastraDBMessage } from '@mastra/core/agent'
-import type { StorageThreadType } from '@mastra/core/memory'
+import { isObservationalMemoryEnabled, type StorageThreadType } from '@mastra/core/memory'
 import { LibSQLStore } from '@mastra/libsql'
 import { Memory } from '@mastra/memory'
 import { ensureMattersDatabaseDirectory, mattersDatabaseAuthToken, mattersDatabaseUrl } from './database-url'
+import { matterObservationSummary, matterObservationalMemoryConfig } from './observational-memory'
 import { matterMessageText, toIso } from './present'
 import { MATTER_KIND, matterResourceId } from './resource'
 import { resolveMatterTitle } from './title'
-import type { MatterMessage, MatterSummary, MatterThread } from './types'
+import type { MatterMessage, MatterObservations, MatterSummary, MatterThread } from './types'
 
 /**
  * Matter sessions on Mastra memory.
@@ -20,7 +21,10 @@ import type { MatterMessage, MatterSummary, MatterThread } from './types'
  * file, or to a libsql:// URL with CHATLEGAL_MATTERS_AUTH_TOKEN. Postgres is
  * a later swap to @mastra/pg; list/create/read stay the same.
  *
- * Observational memory and semantic recall stay off. Those are later slices.
+ * Observational memory is set on this Memory instance and scoped to the
+ * thread, which is the matter. The observer model stays off unless
+ * CHATLEGAL_OM_ENABLED and CHATLEGAL_OM_MODEL are both set. Semantic recall
+ * stays off. See observational-memory.ts.
  */
 
 export type MatterStore = {
@@ -33,7 +37,7 @@ const globalForMatters = globalThis as { chatlegalMatterStore?: Promise<MatterSt
 
 export async function createMatterStore(
   url: string = mattersDatabaseUrl(),
-  options: { authToken?: string; id?: string } = {},
+  options: { authToken?: string; id?: string; env?: NodeJS.ProcessEnv } = {},
 ): Promise<MatterStore> {
   ensureMattersDatabaseDirectory(url)
   const authToken = options.authToken ?? mattersDatabaseAuthToken(url)
@@ -48,7 +52,7 @@ export async function createMatterStore(
       lastMessages: 40,
       semanticRecall: false,
       generateTitle: false,
-      observationalMemory: false,
+      observationalMemory: matterObservationalMemoryConfig(options.env ?? process.env),
     },
   })
   await storage.init()
@@ -60,6 +64,15 @@ export async function createMatterStore(
       await storage.close()
     },
   }
+}
+
+/** Drops the process-wide store. Tests use this before pointing at another file. */
+export async function disconnectMatterStore(): Promise<void> {
+  const pending = globalForMatters.chatlegalMatterStore
+  globalForMatters.chatlegalMatterStore = undefined
+  if (!pending) return
+  const store = await pending.catch(() => null)
+  await store?.close()
 }
 
 export function getMatterStore(): Promise<MatterStore> {
@@ -155,7 +168,31 @@ export async function getMatterThread(
       createdAt: toIso(message.createdAt),
     }))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id))
-  return { matter: toSummary(thread), messages }
+  return {
+    matter: toSummary(thread),
+    messages,
+    observations: await readMatterObservations(store, resourceId, matterId),
+  }
+}
+
+/**
+ * Reads the summary stored for this thread only.
+ * The lookup key is the matter id. A resource-scoped row is a different key
+ * and is not read here.
+ */
+async function readMatterObservations(
+  store: MatterStore,
+  resourceId: string,
+  matterId: string,
+): Promise<MatterObservations> {
+  const enabled = isObservationalMemoryEnabled(store.memory.getMergedThreadConfig().observationalMemory)
+  const domain = await store.memory.storage.getStore('memory')
+  if (!domain?.supportsObservationalMemory) return { enabled, summary: '' }
+  const record = await domain.getObservationalMemory(matterId, resourceId)
+  return {
+    enabled,
+    summary: matterObservationSummary(record, { matterId, resourceId }),
+  }
 }
 
 /**

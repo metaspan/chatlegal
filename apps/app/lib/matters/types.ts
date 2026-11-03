@@ -17,9 +17,20 @@ export type MatterMessage = {
   createdAt: string
 }
 
+/**
+ * Concierge summary for one matter thread.
+ * `enabled` is whether the observer model is configured.
+ * `summary` is the text already stored for this thread. Empty when there is none.
+ */
+export type MatterObservations = {
+  enabled: boolean
+  summary: string
+}
+
 export type MatterThread = {
   matter: MatterSummary
   messages: MatterMessage[]
+  observations: MatterObservations
 }
 
 export type MatterThreadStatus = 'idle' | 'loading' | 'ready' | 'error'
