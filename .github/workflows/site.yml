@@ -1,0 +1,23 @@
+name: site
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: install and build apps/site
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: apps/site/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn build

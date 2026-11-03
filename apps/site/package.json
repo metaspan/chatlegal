@@ -1,0 +1,33 @@
+{
+  "name": "@chatlegal/site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "engineStrict": true,
+  "packageManager": "yarn@1.22.22",
+  "scripts": {
+    "dev": "next dev",
+    "prebuild": "node --experimental-strip-types scripts/assert-docs-root.ts && node --experimental-strip-types scripts/assert-routes.ts && node --experimental-strip-types scripts/write-llms.ts",
+    "build": "next build",
+    "postbuild": "node --experimental-strip-types scripts/assert-export.ts",
+    "preview": "python3 -m http.server 4173 --directory out"
+  },
+  "dependencies": {
+    "@mdx-js/loader": "^3.1.1",
+    "@mdx-js/react": "^3.1.1",
+    "@next/mdx": "^16.4.4",
+    "next": "^16.4.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/mdx": "^2.0.13",
+    "@types/node": "^22.19.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^5.9.0"
+  }
+}

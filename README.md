@@ -1,10 +1,16 @@
 # ChatLegal
 
-UK citizen legal-**information** product ([chatlegal.uk](https://chatlegal.uk)).
+UK citizen legal information ([chatlegal.uk](https://chatlegal.uk)).
 
-**Not a solicitor. Not legal advice.** Information, triage, and cited retrieval for everyday problems (housing, employment, consumer, welfare), with clear escalation when a lawyer or official process is needed.
+ChatLegal explains everyday problems in plain English and points to official sources. It is information, triage, and cited retrieval. It is not a solicitor, and it is not Citizens Advice.
 
-Plan-mode documentation lives in [`docs/`](docs/). Build is off until explicitly authorised.
+**Not a solicitor. Not legal advice.**
+
+- Plain-English explanations, with citations to official sources.
+- A case type and a protocol, rather than an open-ended chat.
+- Money, crime, immigration, children, and hard deadlines are handed on to a person or an official process.
+
+Public docs: [chatlegal.uk/docs](https://chatlegal.uk/docs/). Plan-mode documentation in this repository is [`docs/`](docs/). The site is [`apps/site`](apps/site/) (Next.js static export, Node 22). [`apps/app`](apps/app/) is reserved for later chat and is not built.
 
 ## Docs map
 
@@ -21,6 +27,8 @@ Plan-mode documentation lives in [`docs/`](docs/). Build is off until explicitly
 | [docs/CURATED_LAWS.md](docs/CURATED_LAWS.md) | Curated laws seed table (five locked leaves) |
 | [docs/policies/](docs/policies/) | Draft ethics, privacy, GenAI, TNA answers |
 | [docs/backlog/](docs/backlog/) | BL-001 case work area · BL-002 tech design · BL-003 guardrails · BL-004 protocol packs · BL-005 referral map · BL-006 chatlegal.uk/docs site |
+| [apps/site/](apps/site/) | chatlegal.uk docs site (static Next.js) |
+| [apps/app/](apps/app/) | Reserved for app.chatlegal.uk (not built) |
 | [CONTRIBUTORS.md](CONTRIBUTORS.md) | Acknowledgements |
 
 ## Licence for this repo

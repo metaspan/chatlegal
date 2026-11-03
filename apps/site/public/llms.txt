@@ -1,0 +1,59 @@
+# ChatLegal docs
+
+> UK citizen legal-information pages for chatlegal.uk. Not a solicitor. Not legal advice.
+
+Stub index (Hermes M1). Page bodies are placeholders. Curated law tables and the source allowlist are not rendered here yet.
+
+Source: https://github.com/metaspan/chatlegal
+
+## Overview
+
+- [Overview](https://chatlegal.uk/docs/): Start here. Placeholder docs for housing, employment, consumer, and welfare topics, plus sources and referrals.
+- [How it works](https://chatlegal.uk/docs/how-it-works/): Placeholder for protocols, triage, citations, and jurisdiction tags for England and Wales, Scotland, and Northern Ireland.
+
+## Law
+
+- [Housing](https://chatlegal.uk/docs/housing/): Placeholder hub for housing topics. Scope, instruments, and where to get help are not written yet.
+- [Possession notice](https://chatlegal.uk/docs/housing/possession-notice/): Placeholder. Possession notices are in the locked evaluation set. This page does not say whether a notice is valid.
+- [Deposit](https://chatlegal.uk/docs/housing/deposit/): Placeholder. Tenancy deposits are in the locked evaluation set. This page does not advise on a deposit dispute.
+- [Disrepair](https://chatlegal.uk/docs/housing/disrepair/): Planned stub for housing disrepair. Not written yet.
+- [Rent increase](https://chatlegal.uk/docs/housing/rent-increase/): Planned stub for rent increases. Not written yet.
+- [Illegal eviction](https://chatlegal.uk/docs/housing/illegal-eviction/): Planned stub. Illegal eviction is marked for a hard-escalate callout. This page does not explain the law.
+- [Neighbour nuisance](https://chatlegal.uk/docs/housing/neighbour-nuisance/): Planned stub for neighbour nuisance. Not written yet.
+- [Boundary](https://chatlegal.uk/docs/housing/boundary/): Planned stub for boundary problems. Not written yet.
+- [Employment](https://chatlegal.uk/docs/employment/): Placeholder hub for employment topics. Scope and instruments are not written yet.
+- [Unpaid wages](https://chatlegal.uk/docs/employment/unpaid-wages/): Placeholder. Unpaid wages are in the locked evaluation set. This page does not calculate what anyone is owed.
+- [Dismissal](https://chatlegal.uk/docs/employment/dismissal/): Planned stub for dismissal. Not written yet.
+- [Redundancy](https://chatlegal.uk/docs/employment/redundancy/): Planned stub for redundancy. Not written yet.
+- [Harassment and discrimination](https://chatlegal.uk/docs/employment/harassment-discrimination/): Planned stub for harassment and discrimination at work. Not written yet.
+- [Holiday and sick pay](https://chatlegal.uk/docs/employment/holiday-sick-pay/): Planned stub for holiday and sick pay. Not written yet.
+- [Consumer / debt](https://chatlegal.uk/docs/consumer/): Placeholder hub for consumer and debt topics. Scope and instruments are not written yet.
+- [Private parking](https://chatlegal.uk/docs/consumer/private-parking/): Placeholder. Private parking charges are in the locked evaluation set. This page does not say whether a charge is payable.
+- [Council PCN](https://chatlegal.uk/docs/consumer/council-pcn/): Planned stub for council PCNs. Not written yet.
+- [Faulty goods](https://chatlegal.uk/docs/consumer/faulty-goods/): Planned stub for faulty goods. Not written yet.
+- [Bailiffs](https://chatlegal.uk/docs/consumer/bailiffs/): Planned stub for bailiffs. Not written yet.
+- [Credit complaints](https://chatlegal.uk/docs/consumer/credit-complaints/): Planned stub for credit complaints. Not written yet.
+- [Welfare](https://chatlegal.uk/docs/welfare/): Placeholder hub for welfare benefits topics. Scope and instruments are not written yet.
+- [Universal Credit sanction](https://chatlegal.uk/docs/welfare/uc-sanction-mr/): Placeholder. Universal Credit sanctions are in the locked evaluation set. This page does not advise on a sanction or a mandatory reconsideration.
+- [PIP refusal](https://chatlegal.uk/docs/welfare/pip-refusal/): Planned stub for PIP refusals. Not written yet.
+- [Tribunal appeal](https://chatlegal.uk/docs/welfare/tribunal-appeal/): Planned stub for benefit tribunal appeals. Not written yet.
+- [Overpayment](https://chatlegal.uk/docs/welfare/overpayment/): Planned stub for benefit overpayments. Not written yet.
+
+## Sources
+
+- [Sources](https://chatlegal.uk/docs/sources/): Placeholder hub for data sources. Allowlist tables are not generated in this milestone.
+- [Legislation](https://chatlegal.uk/docs/sources/legislation/): Placeholder for legislation.gov.uk and related Open Government Licence text. No statute is quoted here.
+- [GOV.UK and Acas](https://chatlegal.uk/docs/sources/govuk-acas/): Placeholder for GOV.UK, Acas, and related official guidance sources. No guidance is quoted here.
+- [Find Case Law](https://chatlegal.uk/docs/sources/find-case-law/): Placeholder for Find Case Law licence notes. Judgment text is not shown.
+- [Courts and tribunals](https://chatlegal.uk/docs/sources/courts-tribunals/): Placeholder for court and tribunal source notes. Decisions are not reproduced here.
+- [Link-out only](https://chatlegal.uk/docs/sources/link-out-only/): Placeholder for sources that stay link-out only. This site does not link to the Official Injury Claim service and does not quote blocked sources.
+- [Attribution](https://chatlegal.uk/docs/sources/attribution/): Placeholder for the attribution lines the site will use when it later quotes official text. Nothing is quoted in this scaffold.
+
+## Help
+
+- [Referrals](https://chatlegal.uk/docs/referrals/): Placeholder for where to get help from a person. Routes are not listed yet. This page is not a helpline.
+
+## Governance
+
+- [Policies](https://chatlegal.uk/docs/policies/): Placeholder index of draft policy notes in the ChatLegal repository. Summaries are not written yet.
+- [For agents](https://chatlegal.uk/docs/for-agents/): Machine-readable stub index at /llms.txt. Citation rules are not written yet.
