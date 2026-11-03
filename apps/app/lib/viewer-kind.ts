@@ -27,8 +27,8 @@ const VIEWER_COPY: Record<ViewerKind, { heading: string; body: string }> = {
     body: 'No PDF is open. A PDF will show here.',
   },
   'chat-state': {
-    heading: 'Chat state',
-    body: 'Nothing to show yet. Chat state will appear here once a conversation is connected.',
+    heading: 'Summary',
+    body: 'No matter is open. Open a chat to see its summary.',
   },
 }
 

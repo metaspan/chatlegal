@@ -1,7 +1,14 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import type { MatterSummary, MatterThread, MatterThreadStatus } from '@/lib/matters/types'
+import { isMatterObservations } from '@/lib/matters/present'
+import type { MatterMessage, MatterObservations, MatterSummary, MatterThread, MatterThreadStatus } from '@/lib/matters/types'
+
+type OpenMatter = {
+  matter: MatterSummary
+  messages: MatterMessage[]
+  observations: MatterObservations | null
+}
 
 type MatterListResponse = { matters?: MatterSummary[] }
 type MatterCreateResponse = { matter?: MatterSummary }
@@ -16,12 +23,12 @@ export function useMatterSessions() {
   const [loaded, setLoaded] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [thread, setThread] = useState<MatterThread | null>(null)
+  const [thread, setThread] = useState<OpenMatter | null>(null)
   const [threadError, setThreadError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const activeIdRef = useRef<string | null>(null)
 
-  function choose(id: string, known?: MatterThread | null) {
+  function choose(id: string, known?: OpenMatter | null) {
     activeIdRef.current = id
     setActiveId(id)
     setThreadError(null)
@@ -68,7 +75,8 @@ export function useMatterSessions() {
         const body = (await response.json()) as MatterThread
         if (cancelled || activeIdRef.current !== matterId) return
         if (!body.matter || body.matter.id !== matterId || !Array.isArray(body.messages)) throw new Error('load')
-        setThread(body)
+        if (!isMatterObservations(body.observations)) throw new Error('load')
+        setThread({ matter: body.matter, messages: body.messages, observations: body.observations })
         setThreadError(null)
       } catch {
         if (!cancelled && activeIdRef.current === matterId) {
@@ -98,7 +106,7 @@ export function useMatterSessions() {
       if (!body.matter?.id) throw new Error('create')
       const matter = body.matter
       setMatters((current) => [matter, ...current.filter((item) => item.id !== matter.id)])
-      choose(matter.id, { matter, messages: [] })
+      choose(matter.id, { matter, messages: [], observations: null })
     } catch {
       setListError('A new matter could not be opened.')
     } finally {
@@ -115,6 +123,7 @@ export function useMatterSessions() {
         ? 'ready'
         : 'loading'
   const messages = thread?.matter.id === activeId ? thread.messages : []
+  const observations = thread?.matter.id === activeId ? thread.observations : null
 
   return {
     matters,
@@ -123,6 +132,7 @@ export function useMatterSessions() {
     activeId,
     active,
     messages,
+    observations,
     threadStatus,
     creating,
     choose,

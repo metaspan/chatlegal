@@ -128,6 +128,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           detail={copy.detail}
           matterId={mattersSession.activeId}
           messages={mattersSession.messages}
+          threadStatus={mattersSession.threadStatus}
+          observations={mattersSession.observations}
           draft={draftText(drafts, mattersSession.activeId)}
           onDraftChange={(text) => {
             const matterId = mattersSession.activeId
@@ -139,7 +141,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </ChatColumn>
         {rightOpen || mobileRight ? (
           <div className={cnPane(rightOpen, mobileRight)}>
-            <DocumentViewer onCollapse={() => (narrow ? setMobileRight(false) : setRightOpen(false))} />
+            <DocumentViewer
+              matterId={mattersSession.activeId}
+              threadStatus={mattersSession.threadStatus}
+              observations={mattersSession.observations}
+              onCollapse={() => (narrow ? setMobileRight(false) : setRightOpen(false))}
+            />
           </div>
         ) : null}
       </div>

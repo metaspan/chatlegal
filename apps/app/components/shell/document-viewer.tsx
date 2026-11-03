@@ -5,7 +5,9 @@ import { Activity, FileText, Image as ImageIcon, PanelRightClose, ScrollText } f
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatSidebarResizeHandle, useChatSidebarWidth } from '@/components/chat/chat-sidebar-resize'
+import { MatterSummary } from '@/components/shell/matter-summary'
 import { VIEWER_KINDS, VIEWER_KIND_LABELS, viewerPanelCopy, type ViewerKind } from '@/lib/viewer-kind'
+import type { MatterObservations, MatterThreadStatus } from '@/lib/matters/types'
 import { cn } from '@/lib/utils'
 
 const KIND_ICONS: Record<ViewerKind, LucideIcon> = {
@@ -18,10 +20,23 @@ const KIND_ICONS: Record<ViewerKind, LucideIcon> = {
 /**
  * Right pane. Width drag is the docked-sidebar handle from
  * dcolley/tourbillon@7a8595b apps/web/components/chat/chat-sidebar-resize.tsx.
- * Switching kind only changes the placeholder. Nothing is loaded.
+ * Chat state shows the open matter's summary. The other kinds stay placeholders.
  */
-export function DocumentViewer({ onCollapse }: { onCollapse: () => void }) {
-  const [kind, setKind] = useState<ViewerKind>('markdown')
+export function DocumentViewer({
+  onCollapse,
+  matterId = null,
+  threadStatus = 'idle',
+  observations = null,
+  initialKind = 'markdown',
+}: {
+  onCollapse: () => void
+  matterId?: string | null
+  threadStatus?: MatterThreadStatus
+  observations?: MatterObservations | null
+  /** Tests open a tab directly. The shell leaves this unset. */
+  initialKind?: ViewerKind
+}) {
+  const [kind, setKind] = useState<ViewerKind>(initialKind)
   const { width, dragging, onResizePointerDown, onResizeKeyDown } = useChatSidebarWidth()
   const copy = viewerPanelCopy(kind)
   const Icon = KIND_ICONS[kind]
@@ -84,8 +99,14 @@ export function DocumentViewer({ onCollapse }: { onCollapse: () => void }) {
         <div className="flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
           <Icon className="size-5" />
         </div>
-        <h3 className="font-serif text-lg font-semibold">{copy.heading}</h3>
-        <p className="text-sm text-muted-foreground">{copy.body}</p>
+        {kind === 'chat-state' ? (
+          <MatterSummary matterId={matterId} status={threadStatus} observations={observations} />
+        ) : (
+          <>
+            <h3 className="font-serif text-lg font-semibold">{copy.heading}</h3>
+            <p className="text-sm text-muted-foreground">{copy.body}</p>
+          </>
+        )}
       </div>
     </aside>
   )

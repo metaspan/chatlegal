@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mattersDatabaseAuthToken, mattersDatabaseUrl } from './database-url.ts'
 import { draftText, writeDraft } from './draft.ts'
 import { filterMatterHistory } from './filter.ts'
-import { matterHistoryDetail, matterMessageText, matterThreadCopy } from './present.ts'
+import { isMatterObservations, matterHistoryDetail, matterMessageText, matterObservationCopy, matterThreadCopy } from './present.ts'
 import { matterResourceId } from './resource.ts'
 import { MatterTitleError, resolveMatterTitle } from './title.ts'
 
@@ -93,6 +93,39 @@ describe('matter presentation', () => {
       /No messages in this matter yet/,
     )
     assert.equal(matterThreadCopy({ title: 'Deposit', status: 'ready', messageCount: 2 }).title, 'Deposit')
+  })
+
+  it('shows a summary only for the open matter', () => {
+    assert.equal(isMatterObservations({ enabled: false, summary: '' }), true)
+    assert.equal(isMatterObservations({ enabled: 'no', summary: '' }), false)
+    assert.match(matterObservationCopy({ matterId: null, status: 'idle', observations: null }).detail, /Open a chat/)
+    assert.equal(
+      matterObservationCopy({ matterId: null, status: 'idle', observations: { enabled: true, summary: 'Secret' } }).summary,
+      null,
+    )
+    assert.match(
+      matterObservationCopy({ matterId: 'm', status: 'ready', observations: { enabled: false, summary: '' } }).detail,
+      /No summary for this matter yet/,
+    )
+    assert.equal(
+      matterObservationCopy({ matterId: 'm', status: 'ready', observations: { enabled: false, summary: '' } }).summary,
+      null,
+    )
+    const shown = matterObservationCopy({
+      matterId: 'm',
+      status: 'ready',
+      observations: { enabled: true, summary: ' Deposit is due Friday. ' },
+    })
+    assert.equal(shown.summary, 'Deposit is due Friday.')
+    assert.match(shown.detail, /only for the open matter/)
+    assert.equal(
+      matterObservationCopy({
+        matterId: 'm',
+        status: 'error',
+        observations: { enabled: true, summary: 'Deposit is due Friday.' },
+      }).summary,
+      null,
+    )
   })
 })
 

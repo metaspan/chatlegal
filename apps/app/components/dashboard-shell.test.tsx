@@ -22,6 +22,8 @@ describe('dashboard shell', () => {
         messages: [{ id: 'msg-1', role: 'user', text: 'When is the deadline?', createdAt: '2026-11-03T00:00:00.000Z' }],
         draft: 'draft for this matter',
         onDraftChange: () => {},
+        threadStatus: 'ready',
+        observations: { enabled: false, summary: 'The deposit deadline is Friday.' },
       }),
     )
     assert.match(chat, /aria-label="Chat"/)
@@ -30,13 +32,24 @@ describe('dashboard shell', () => {
     assert.match(chat, /data-matter-id="matter-1"/)
     assert.match(chat, /data-draft-matter-id="matter-1"/)
     assert.match(chat, /When is the deadline\?/)
+    assert.match(chat, /aria-label="Summary"/)
+    assert.match(chat, /data-observation-matter-id="matter-1"/)
+    assert.match(chat, /The deposit deadline is Friday\./)
+    assert.match(chat, /only for the open matter/)
     assert.match(chat, /draft for this matter/)
     assert.match(chat, /data-slot="composer"/)
     assert.match(chat, /This draft stays with this matter/)
     assert.match(chat, />Send</)
     assert.match(chat, /disabled/)
 
-    const viewer = renderToStaticMarkup(createElement(DocumentViewer, { onCollapse: () => {} }))
+    const viewer = renderToStaticMarkup(
+      createElement(DocumentViewer, {
+        onCollapse: () => {},
+        matterId: 'matter-1',
+        threadStatus: 'ready',
+        observations: { enabled: true, summary: 'The deposit deadline is Friday.' },
+      }),
+    )
     assert.match(viewer, /aria-label="Viewer"/)
     assert.match(viewer, /Resize viewer/)
     assert.match(viewer, /--viewer-pane-width:448px/)
@@ -45,6 +58,34 @@ describe('dashboard shell', () => {
     assert.match(viewer, /PDF/)
     assert.match(viewer, /Chat state/)
     assert.match(viewer, /No document is open/)
+    assert.doesNotMatch(viewer, /The deposit deadline is Friday/)
+
+    const chatState = renderToStaticMarkup(
+      createElement(DocumentViewer, {
+        onCollapse: () => {},
+        matterId: 'matter-1',
+        threadStatus: 'ready',
+        observations: { enabled: true, summary: 'The deposit deadline is Friday.' },
+        initialKind: 'chat-state',
+      }),
+    )
+    assert.match(chatState, /data-viewer-kind="chat-state"/)
+    assert.match(chatState, /data-observation-matter-id="matter-1"/)
+    assert.match(chatState, /The deposit deadline is Friday\./)
+    assert.doesNotMatch(chatState, /No document is open/)
+
+    const emptySummary = renderToStaticMarkup(
+      createElement(DocumentViewer, {
+        onCollapse: () => {},
+        matterId: 'matter-2',
+        threadStatus: 'ready',
+        observations: { enabled: false, summary: '' },
+        initialKind: 'chat-state',
+      }),
+    )
+    assert.match(emptySummary, /No summary for this matter yet/)
+    assert.match(emptySummary, /data-observation-enabled="false"/)
+    assert.doesNotMatch(emptySummary, /Friday/)
 
     const history = renderToStaticMarkup(
       createElement(HistoryPane, {
@@ -123,6 +164,7 @@ describe('dashboard shell', () => {
     assert.match(shell, /useMatterSessions/)
     assert.match(shell, /writeDraft/)
     assert.match(shell, /ChatColumn/)
+    assert.match(shell, /observations=\{mattersSession\.observations\}/)
     assert.match(shell, /DocumentViewer/)
     assert.match(shell, /DisclaimerBar/)
     assert.match(shell, /data-chat-resize-root/)
