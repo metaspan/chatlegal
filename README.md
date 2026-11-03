@@ -2,11 +2,11 @@
 
 UK citizen legal information ([chatlegal.uk](https://chatlegal.uk)).
 
-ChatLegal explains everyday problems in plain English and points to official sources. It is information, triage, and cited retrieval. It is not a solicitor, and it is not Citizens Advice.
+ChatLegal explains everyday problems in plain language and points to official sources. It is information, triage, and cited retrieval. It is not a solicitor, and it is not Citizens Advice.
 
 **Not a solicitor. Not legal advice.**
 
-- Plain-English explanations, with citations to official sources.
+- Plain-language explanations, with citations to official sources.
 - A case type and a protocol, rather than an open-ended chat.
 - Money, crime, immigration, children, and hard deadlines are handed on to a person or an official process.
 

@@ -5,7 +5,7 @@ import { WaitlistForm } from '@/components/WaitlistForm'
 export const metadata: Metadata = {
   title: { absolute: 'ChatLegal' },
   description:
-    'UK citizen legal information in plain English, with citations to official sources. Not a solicitor. Not legal advice.',
+    'UK citizen legal information in plain language, with citations to official sources. Not a solicitor. Not legal advice.',
   alternates: { canonical: '/' },
 }
 
@@ -23,9 +23,9 @@ export default function HomePage() {
       </header>
       <div className="home-wrap">
         <p className="eyebrow">UK citizen legal information</p>
-        <h1>Plain English, with the official source beside it.</h1>
+        <h1>Plain language, backed by the official source.</h1>
         <p className="home-lede">
-          ChatLegal explains everyday problems in plain English and points to official sources. It
+          ChatLegal explains everyday problems in plain language and points to official sources. It
           is information, triage, and cited retrieval. It is not a solicitor, and it is not Citizens
           Advice.
         </p>
@@ -38,7 +38,7 @@ export default function HomePage() {
           </a>
         </div>
         <ul className="home-points">
-          <li>Plain-English explanations, with citations to official sources.</li>
+          <li>Plain-language explanations, with citations to official sources.</li>
           <li>A case type and a protocol, rather than an open-ended chat.</li>
           <li>Money, crime, immigration, children, and hard deadlines are handed on to a person or an official process.</li>
         </ul>

@@ -10,7 +10,7 @@ export function StatusNote({ status }: { status: PageStatus }) {
       ) : status === 'planned' ? (
         <span>Not written yet.</span>
       ) : (
-        <span>Placeholder. Not a counsel-reviewed page.</span>
+        <span>Draft. Not a counsel-reviewed page.</span>
       )}
     </p>
   )
