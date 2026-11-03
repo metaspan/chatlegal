@@ -7,9 +7,11 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ChatColumn } from './chat/chat-column.tsx'
 import { composerSendsOnEnter } from '../lib/chat-composer.ts'
+import { basicPlanUsage } from '../lib/plan-usage.ts'
 import { DisclaimerBar } from './disclaimer-bar.tsx'
 import { DocumentViewer } from './shell/document-viewer.tsx'
 import { HistoryPane } from './shell/history-pane.tsx'
+import { PlanUsageCard } from './shell/plan-usage-card.tsx'
 import { PaneEdgeToggle } from './shell/pane-edge-toggle.tsx'
 import {
   defaultRightPaneView,
@@ -164,6 +166,8 @@ describe('dashboard shell', () => {
     assert.match(history, /Deposit/)
     assert.match(history, /data-matter-id="matter-1"/)
     assert.doesNotMatch(history, /Chat title|Matter title|Placeholder/)
+    assertPlanCard(history)
+    assert.ok(history.indexOf('data-plan-footer') > history.indexOf('>History<'))
 
     const libraryLink = renderToStaticMarkup(createElement(HistoryPane, { ...historyProps(), libraryActive: true }))
     assert.match(libraryLink, /href="\/library"/)
@@ -173,6 +177,8 @@ describe('dashboard shell', () => {
     const emptyHistory = renderToStaticMarkup(createElement(HistoryPane, historyProps()))
     assert.match(emptyHistory, /No matters yet/)
     assert.match(emptyHistory, /href="\/library"/)
+    assertPlanCard(emptyHistory)
+    assert.ok(emptyHistory.indexOf('data-plan-footer') > emptyHistory.indexOf('No matters yet'))
     assert.doesNotMatch(emptyHistory, /No files yet|Open a matter to see its files|Add a file/)
 
     const failedHistory = renderToStaticMarkup(
@@ -188,6 +194,10 @@ describe('dashboard shell', () => {
     assert.match(disclaimer, /Not a solicitor\. Not legal advice\./)
     assert.match(disclaimer, /lang="cy"/)
     assert.doesNotMatch(chat + viewer + history + disclaimer, /I act for you/)
+    assert.doesNotMatch(viewer, /data-plan-card/)
+
+    const card = renderToStaticMarkup(createElement(PlanUsageCard))
+    assertPlanCard(card)
   })
 
   it('renders a pending askChoice card and an answered one locked to the pick', () => {
@@ -341,6 +351,25 @@ describe('dashboard shell', () => {
     assert.match(libraryHook, /kind: 'matter'/)
   })
 })
+
+function assertPlanCard(html: string) {
+  assert.match(html, /aria-label="Plan and usage"/)
+  assert.match(html, /data-plan-card/)
+  assert.match(html, new RegExp(`data-plan-tier="${basicPlanUsage.tierName}"`))
+  assert.match(html, new RegExp(`data-plan-price="${basicPlanUsage.priceLabel}"`))
+  assert.match(html, /data-plan-remaining="placeholder"/)
+  assert.match(html, /data-upgrade-available="false"/)
+  assert.match(html, new RegExp(`>${basicPlanUsage.tierName}<`))
+  assert.match(html, new RegExp(`>${basicPlanUsage.priceLabel}<`))
+  assert.match(html, new RegExp(basicPlanUsage.remainingLabel))
+  assert.match(html, new RegExp(basicPlanUsage.remainingDetail.replace(/\./g, '\\.')))
+  assert.match(html, new RegExp(`>${basicPlanUsage.upgradeLabel}<`))
+  assert.match(html, new RegExp(basicPlanUsage.upgradeDetail.replace(/\./g, '\\.')))
+  const upgrade = html.slice(html.indexOf('data-plan-card'))
+  assert.match(upgrade, /<button[^>]*disabled/)
+  assert.doesNotMatch(upgrade, /href=/)
+  assert.doesNotMatch(upgrade, /I act for you|we advise/i)
+}
 
 function historyProps() {
   return {
