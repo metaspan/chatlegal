@@ -1,18 +1,22 @@
 'use client'
 
-import type { FormEvent, MouseEvent, ReactNode } from 'react'
-import { Send } from 'lucide-react'
+import { useEffect, useRef, type FormEvent, type MouseEvent, type ReactNode } from 'react'
+import { Plus, Send } from 'lucide-react'
+import { MessageList } from '@/components/chat/message-list'
 import { MatterSummary } from '@/components/shell/matter-summary'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { composerSendsOnEnter } from '@/lib/chat-composer'
 import type { MatterMessage, MatterObservations, MatterThreadStatus } from '@/lib/matters/types'
 
 /**
- * Centre column: the open matter's thread plus a text box.
+ * Centre column: the open matter's messages and a text box.
  * The box matches the composer frame in
  * dcolley/tourbillon@7a8595b apps/web/components/assistant/composer/composer.tsx
- * (bordered field, message label, send row). Send stays off until a model is
- * connected. The draft is kept against the open matter id by the shell.
+ * (bordered field, message label, send row). Attachments, queue, steer, and
+ * stop stay out: there is no model run yet.
+ * TODO(G-01 Concierge): stream the assistant reply after Send stores the user's words.
+ * The draft is kept against the open matter id by the shell.
  */
 export function ChatColumn({
   title,
@@ -21,6 +25,11 @@ export function ChatColumn({
   messages,
   draft,
   onDraftChange,
+  onSend,
+  onNewChat,
+  creating = false,
+  sending = false,
+  sendError = null,
   threadStatus = 'idle',
   observations = null,
   children,
@@ -31,10 +40,25 @@ export function ChatColumn({
   messages: readonly MatterMessage[]
   draft: string
   onDraftChange: (text: string) => void
+  onSend?: (text: string) => Promise<boolean> | boolean
+  onNewChat?: () => void
+  creating?: boolean
+  sending?: boolean
+  sendError?: string | null
   threadStatus?: MatterThreadStatus
   observations?: MatterObservations | null
   children?: ReactNode
 }) {
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const showSummary = threadStatus === 'ready' && Boolean(observations?.summary.trim())
+  const lastId = messages.at(-1)?.id ?? ''
+
+  useEffect(() => {
+    const el = scrollerRef.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+  }, [matterId, messages.length, lastId])
+
   return (
     <main
       id="chat"
@@ -43,25 +67,45 @@ export function ChatColumn({
       data-matter-id={matterId ?? ''}
       className="flex min-h-0 min-w-0 flex-1 flex-col bg-background"
     >
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div ref={scrollerRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {children ? <div className="px-4 pt-4 md:px-6">{children}</div> : null}
-        <div id="chat-thread" className="flex flex-col gap-3 px-4 py-6 md:px-6">
-          <h1 className="font-serif text-xl font-semibold tracking-tight">{title}</h1>
-          <p className="max-w-prose text-sm text-muted-foreground">{detail}</p>
-          <MatterSummary matterId={matterId} status={matterId ? threadStatus : 'idle'} observations={observations} />
-          {messages.length > 0 ? (
-            <ol className="flex max-w-prose flex-col gap-3" aria-label="Messages">
-              {messages.map((message) => (
-                <li key={message.id} data-message-id={message.id} data-message-role={message.role}>
-                  <p className="text-xs font-medium text-muted-foreground">{message.role === 'user' ? 'You' : 'ChatLegal'}</p>
-                  <p className="mt-1 text-sm whitespace-pre-wrap">{message.text}</p>
-                </li>
-              ))}
-            </ol>
-          ) : null}
+        <div id="chat-thread" className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-4 py-6 md:px-6">
+          {messages.length === 0 ? (
+            <div data-chat-empty className="my-auto flex max-w-prose flex-col gap-3">
+              <h1 className="font-serif text-2xl font-semibold tracking-tight">{title}</h1>
+              {detail ? <p className="text-sm leading-relaxed text-muted-foreground">{detail}</p> : null}
+              {!matterId && onNewChat ? (
+                <div>
+                  <Button type="button" variant="outline" onClick={onNewChat} disabled={creating} aria-busy={creating}>
+                    <Plus />
+                    New chat
+                  </Button>
+                </div>
+              ) : null}
+              {showSummary ? (
+                <MatterSummary matterId={matterId} status={threadStatus} observations={observations} />
+              ) : null}
+            </div>
+          ) : (
+            <>
+              <h1 className="font-serif text-lg font-semibold tracking-tight">{title}</h1>
+              {showSummary ? (
+                <MatterSummary matterId={matterId} status={threadStatus} observations={observations} />
+              ) : null}
+              <MessageList messages={messages} />
+            </>
+          )}
         </div>
       </div>
-      <ChatComposer matterId={matterId} draft={draft} onDraftChange={onDraftChange} />
+      <ChatComposer
+        matterId={matterId}
+        draft={draft}
+        onDraftChange={onDraftChange}
+        onSend={onSend}
+        sending={sending}
+        sendError={sendError}
+        threadStatus={threadStatus}
+      />
     </main>
   )
 }
@@ -70,14 +114,34 @@ function ChatComposer({
   matterId,
   draft,
   onDraftChange,
+  onSend,
+  sending,
+  sendError,
+  threadStatus,
 }: {
   matterId: string | null
   draft: string
   onDraftChange: (text: string) => void
+  onSend?: (text: string) => Promise<boolean> | boolean
+  sending: boolean
+  sendError: string | null
+  threadStatus: MatterThreadStatus
 }) {
+  const canSend = Boolean(matterId && threadStatus === 'ready' && draft.trim() && !sending && onSend)
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!canSend || !onSend) return
+    void onSend(draft)
   }
+
+  const hint = !matterId
+    ? 'Start a new chat to write here.'
+    : threadStatus === 'loading'
+      ? 'Opening this matter.'
+      : sending
+        ? 'Saving this message.'
+        : 'Enter sends. Shift and Enter starts a new line. This stays with this matter.'
 
   return (
     <form className="shrink-0 border-t p-3" onSubmit={onSubmit} data-slot="composer" data-draft-matter-id={matterId ?? ''}>
@@ -98,24 +162,41 @@ function ChatComposer({
           key={matterId ?? 'no-matter'}
           value={draft}
           rows={3}
-          disabled={!matterId}
+          disabled={!matterId || threadStatus === 'loading' || threadStatus === 'error'}
           onChange={(event) => {
             if (matterId) onDraftChange(event.target.value)
           }}
-          placeholder={matterId ? 'Write a message' : 'Start a new chat to write here'}
-          className="max-h-40 min-h-24 w-full resize-none border-0 shadow-none focus-visible:ring-0"
+          onKeyDown={(event) => {
+            if (
+              !composerSendsOnEnter({
+                key: event.key,
+                shiftKey: event.shiftKey,
+                metaKey: event.metaKey,
+                ctrlKey: event.ctrlKey,
+                altKey: event.altKey,
+                isComposing: event.nativeEvent.isComposing,
+              })
+            ) {
+              return
+            }
+            event.preventDefault()
+            event.currentTarget.form?.requestSubmit()
+          }}
+          placeholder={matterId ? 'Write what has happened' : 'Start a new chat to write here'}
+          className="max-h-40 min-h-16 w-full resize-none border-0 shadow-none focus-visible:ring-0"
         />
         <div className="flex items-center gap-2">
-          <p className="flex-1 text-xs text-muted-foreground">
-            {matterId
-              ? 'Sending is off until a model is connected. This draft stays with this matter.'
-              : 'Sending is off until a model is connected.'}
-          </p>
-          <Button type="submit" size="sm" disabled>
+          <p className="flex-1 text-xs text-muted-foreground">{hint}</p>
+          <Button type="submit" size="sm" disabled={!canSend} aria-busy={sending}>
             <Send />
             Send
           </Button>
         </div>
+        {sendError ? (
+          <p role="alert" className="text-xs text-destructive">
+            {sendError}
+          </p>
+        ) : null}
       </div>
     </form>
   )

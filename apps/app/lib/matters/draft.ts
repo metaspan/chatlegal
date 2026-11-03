@@ -1,6 +1,6 @@
 /**
  * Composer text keyed by the open matter. Switching matters keeps each draft.
- * Sending stays off until a model is connected, so this never becomes a message.
+ * Send clears the draft for that matter after the message is stored.
  */
 
 export function draftText(drafts: Readonly<Record<string, string>>, matterId: string | null): string {

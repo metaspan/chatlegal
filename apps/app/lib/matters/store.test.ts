@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
+import { randomUUID } from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -64,6 +65,46 @@ describe('mastra matter store', () => {
 
       const listed = await listMatters(store, 'user_a')
       assert.equal(listed[0]?.id, first.id)
+    })
+  })
+
+  it('returns a tool name for the centre pane and leaves the payload in storage only', async () => {
+    await withStore(async (store) => {
+      const matter = await createMatter(store, 'user_a', { title: 'Deposit' })
+      await store.memory.saveMessages({
+        messages: [
+          {
+            id: randomUUID(),
+            role: 'assistant',
+            createdAt: new Date('2026-11-03T00:00:00.000Z'),
+            threadId: matter.id,
+            resourceId: matterResourceId('user_a'),
+            content: {
+              format: 2,
+              parts: [
+                { type: 'text', text: 'Here is what the notice says.' },
+                {
+                  type: 'tool-invocation',
+                  toolInvocation: {
+                    state: 'result',
+                    toolCallId: 'call-1',
+                    toolName: 'search_sources',
+                    args: { query: 'deposit', secret: 'do-not-show' },
+                    result: { token: 'json-dump' },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      })
+      const thread = await getMatterThread(store, 'user_a', matter.id)
+      assert.equal(thread?.messages[0]?.text, 'Here is what the notice says.')
+      assert.deepEqual(thread?.messages[0]?.tools, [{ name: 'search_sources' }])
+      const shown = JSON.stringify(thread?.messages)
+      assert.equal(shown.includes('do-not-show'), false)
+      assert.equal(shown.includes('json-dump'), false)
+      assert.equal(shown.includes('call-1'), false)
     })
   })
 

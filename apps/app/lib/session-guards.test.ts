@@ -61,6 +61,7 @@ describe('signed-in pages guard the session', () => {
       files.map((file) => path.relative(appDir, file)).sort(),
       [
         'app/api/matters/[matterId]/files/route.ts',
+        'app/api/matters/[matterId]/messages/route.ts',
         'app/api/matters/[matterId]/route.ts',
         'app/api/matters/route.ts',
       ],
