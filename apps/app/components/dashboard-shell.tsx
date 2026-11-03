@@ -6,9 +6,11 @@ import { DisclaimerBar } from '@/components/disclaimer-bar'
 import { AppBar } from '@/components/shell/app-bar'
 import { DocumentViewer } from '@/components/shell/document-viewer'
 import { HistoryPane } from '@/components/shell/history-pane'
+import { useMatterSessions } from '@/components/shell/use-matter-sessions'
 import { usePaneOpen } from '@/components/shell/use-pane-open'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { HISTORY_PLACEHOLDERS, NEW_CHAT_ID } from '@/lib/history-placeholders'
+import { draftText, writeDraft } from '@/lib/matters/draft'
+import { matterHistoryDetail, matterThreadCopy } from '@/lib/matters/present'
 import { SHELL_LEFT_OPEN_KEY, SHELL_RIGHT_OPEN_KEY } from '@/lib/shell-layout'
 import { cn } from '@/lib/utils'
 
@@ -21,7 +23,8 @@ function cnPane(desktopOpen: boolean, mobileOpen: boolean): string {
  * Three panes: history, chat, viewer. Either side pane can be hidden.
  * Frame adapted from dcolley/tourbillon@7a8595b
  * apps/web/components/dashboard-shell.tsx and assistant-shell.tsx.
- * Personal accounts only. No model calls.
+ * Personal accounts only. Matters are Mastra threads for the signed-in user.
+ * Sending stays off until a model is connected.
  */
 export function DashboardShell({ children }: { children: ReactNode }) {
   const [leftOpen, setLeftOpen] = usePaneOpen(SHELL_LEFT_OPEN_KEY)
@@ -30,10 +33,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [mobileRight, setMobileRight] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [query, setQuery] = useState('')
-  const [activeId, setActiveId] = useState(NEW_CHAT_ID)
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [libraryNote, setLibraryNote] = useState<string | null>(null)
+  const mattersSession = useMatterSessions()
   const isMobile = useIsMobile()
-  const active = HISTORY_PLACEHOLDERS.find((item) => item.id === activeId)
+  const copy = matterThreadCopy({
+    title: mattersSession.active?.title ?? null,
+    status: mattersSession.threadStatus,
+    messageCount: mattersSession.messages.length,
+  })
   // Wait until after mount so the server HTML matches. A narrow screen then
   // keeps the side panes closed until the app bar opens one over the thread.
   const narrow = mounted && isMobile
@@ -92,12 +100,23 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <HistoryPane
               query={query}
               onQueryChange={setQuery}
-              activeId={activeId}
-              onSelect={setActiveId}
-              onNewChat={() => {
-                setActiveId(NEW_CHAT_ID)
-                setQuery('')
+              matters={mattersSession.matters.map((matter) => ({
+                id: matter.id,
+                title: matter.title,
+                detail: matterHistoryDetail(matter),
+              }))}
+              loaded={mattersSession.loaded}
+              listError={mattersSession.listError}
+              activeId={mattersSession.activeId}
+              onSelect={(id) => {
+                mattersSession.choose(id)
+                if (narrow) setMobileLeft(false)
               }}
+              onNewChat={() => {
+                setQuery('')
+                void mattersSession.createMatterSession()
+              }}
+              creating={mattersSession.creating}
               onCollapse={() => (narrow ? setMobileLeft(false) : setLeftOpen(false))}
               libraryNote={libraryNote}
               onAddFile={() => setLibraryNote('Adding files is not connected yet.')}
@@ -105,8 +124,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </div>
         ) : null}
         <ChatColumn
-          title={active?.title ?? 'New chat'}
-          detail={active?.detail ?? 'Messages will appear here. Chat is not connected yet.'}
+          title={copy.title}
+          detail={copy.detail}
+          matterId={mattersSession.activeId}
+          messages={mattersSession.messages}
+          draft={draftText(drafts, mattersSession.activeId)}
+          onDraftChange={(text) => {
+            const matterId = mattersSession.activeId
+            if (!matterId) return
+            setDrafts((current) => writeDraft(current, matterId, text))
+          }}
         >
           {children}
         </ChatColumn>

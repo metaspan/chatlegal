@@ -13,15 +13,19 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "NODE_ENV=test tsx --test lib/clerk-host.test.ts lib/route-policy.test.ts lib/proxy-response.test.ts lib/proxy-reverse.test.ts lib/session-guards.test.ts lib/session-guards.live.test.ts lib/chat-layout-storage.test.ts lib/shell-layout.test.ts lib/history-placeholders.test.ts lib/viewer-kind.test.ts lib/consumer-only.test.ts components/dashboard-shell.test.tsx"
+    "test": "NODE_ENV=test tsx --test lib/clerk-host.test.ts lib/route-policy.test.ts lib/proxy-response.test.ts lib/proxy-reverse.test.ts lib/session-guards.test.ts lib/session-guards.live.test.ts lib/chat-layout-storage.test.ts lib/shell-layout.test.ts lib/viewer-kind.test.ts lib/consumer-only.test.ts lib/matters/matters.test.ts lib/matters/store.test.ts components/dashboard-shell.test.tsx"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
     "@clerk/nextjs": "^7.9.23",
+    "@mastra/core": "1.78.0",
+    "@mastra/libsql": "1.26.2",
+    "@mastra/memory": "1.36.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.28.0",
     "next": "^16.4.4",
+    "zod": "4.6.7",
     "next-themes": "^0.4.6",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
