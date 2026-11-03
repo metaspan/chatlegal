@@ -10,7 +10,7 @@ ChatLegal explains everyday problems in plain language and points to official so
 - A case type and a protocol, rather than an open-ended chat.
 - Money, crime, immigration, children, and hard deadlines are handed on to a person or an official process.
 
-Public docs: [chatlegal.uk/docs](https://chatlegal.uk/docs/). Plan-mode documentation in this repository is [`docs/`](docs/). The site is [`apps/site`](apps/site/) (Next.js static export, Node 22). [`apps/app`](apps/app/) is reserved for later chat and is not built.
+Public docs: [chatlegal.uk/docs](https://chatlegal.uk/docs/). Plan-mode documentation in this repository is [`docs/`](docs/). The site is [`apps/site`](apps/site/) (Next.js static export, Node 22) at [chatlegal.uk](https://chatlegal.uk). [`apps/app`](apps/app/) is the signed-in consumer app at [app.chatlegal.uk](https://app.chatlegal.uk) (personal Clerk accounts and a 3-pane shell). Clerk is not on the docs site. Chat and case work are still placeholders.
 
 ## Docs map
 
@@ -28,7 +28,7 @@ Public docs: [chatlegal.uk/docs](https://chatlegal.uk/docs/). Plan-mode document
 | [docs/policies/](docs/policies/) | Draft ethics, privacy, GenAI, TNA answers |
 | [docs/backlog/](docs/backlog/) | BL-001 case work area · BL-002 tech design · BL-003 guardrails · BL-004 protocol packs · BL-005 referral map · BL-006 chatlegal.uk/docs site |
 | [apps/site/](apps/site/) | chatlegal.uk docs site (static Next.js) |
-| [apps/app/](apps/app/) | Reserved for app.chatlegal.uk (not built) |
+| [apps/app/](apps/app/) | app.chatlegal.uk consumer shell (Clerk personal accounts; chat not built) |
 | [CONTRIBUTORS.md](CONTRIBUTORS.md) | Acknowledgements |
 
 ## Licence for this repo

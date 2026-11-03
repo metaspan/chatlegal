@@ -1,0 +1,15 @@
+import type { Metadata } from 'next'
+import { requireConsumerSession } from '@/lib/session-guards'
+
+export const metadata: Metadata = { title: 'Work' }
+
+export default async function WorkPage() {
+  await requireConsumerSession()
+
+  return (
+    <section className="flex max-w-prose flex-col gap-2">
+      <h1 className="font-serif text-2xl font-semibold tracking-tight">Work</h1>
+      <p className="text-muted-foreground">Work on the open matter will be listed here.</p>
+    </section>
+  )
+}

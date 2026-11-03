@@ -1,0 +1,32 @@
+name: app
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: install, test, and build apps/app
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/app
+    env:
+      # Non-functional placeholders so next build can compile Clerk. Not a real instance.
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Y2xlcmsuZXhhbXBsZS5jb20k
+      CLERK_SECRET_KEY: sk_test_chatlegalCiBuildPlaceholderNotARealSecret
+      NEXT_PUBLIC_CLERK_SIGN_IN_URL: https://app.chatlegal.uk/sign-in
+      NEXT_PUBLIC_CLERK_SIGN_UP_URL: https://app.chatlegal.uk/sign-up
+      NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: https://app.chatlegal.uk/
+      NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL: https://app.chatlegal.uk/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: apps/app/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn test
+      - run: yarn build
