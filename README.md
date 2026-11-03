@@ -17,8 +17,10 @@ Plan-mode documentation lives in [`docs/`](docs/). Build is off until explicitly
 | [docs/CASE_TAXONOMY.md](docs/CASE_TAXONOMY.md) | Seed Category → leaf list (EW) |
 | [docs/eval/](docs/eval/) | Draft gold answer pack for the five eval stories |
 | [docs/REFERRALS.md](docs/REFERRALS.md) | Draft referral / escalate destination map |
+| [docs/SITE_DOCS_PLAN.md](docs/SITE_DOCS_PLAN.md) | Plan for chatlegal.uk/docs (IA, pipeline, stack, roles) |
+| [docs/CURATED_LAWS.md](docs/CURATED_LAWS.md) | Curated laws seed table (five locked leaves) |
 | [docs/policies/](docs/policies/) | Draft ethics, privacy, GenAI, TNA answers |
-| [docs/backlog/](docs/backlog/) | BL-001 case work area · BL-002 tech design · BL-003 guardrails · BL-004 protocol packs · BL-005 referral map |
+| [docs/backlog/](docs/backlog/) | BL-001 case work area · BL-002 tech design · BL-003 guardrails · BL-004 protocol packs · BL-005 referral map · BL-006 chatlegal.uk/docs site |
 | [CONTRIBUTORS.md](CONTRIBUTORS.md) | Acknowledgements |
 
 ## Licence for this repo

@@ -9,3 +9,4 @@ Plan-mode feature backlog for ChatLegal. Items here are **not** authorised for b
 | [BL-003](./BL-003-guardrails-safety.md) | Guardrails & safety (CSE, self-harm, terrorism, …) | Draft |
 | [BL-004](./BL-004-protocol-packs-eval-five.md) | Protocol packs — eval five (possession notice, deposit, unpaid wages, private parking, UC sanction/MR) | Draft |
 | [BL-005](./BL-005-referral-escalate-map.md) | Referral / escalate map (destinations + hard-escalate block) | Draft |
+| [BL-006](./BL-006-chatlegal-uk-docs-site.md) | chatlegal.uk/docs site — curated laws + data sources (Hermes build, Ops deploy) | Draft |
