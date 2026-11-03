@@ -39,9 +39,9 @@ describe('signed-in pages guard the session', () => {
   const signedInDir = path.join(appDir, 'app/(app)')
   const pages = walk(signedInDir).filter((file) => file.endsWith('page.tsx') || file.endsWith('layout.tsx'))
 
-  it('covers the home, matters, and work routes', () => {
+  it('covers the home, library, matters, and work routes', () => {
     const rels = pages.map((file) => path.relative(signedInDir, file)).sort()
-    assert.deepEqual(rels, ['layout.tsx', 'matters/page.tsx', 'page.tsx', 'work/page.tsx'])
+    assert.deepEqual(rels, ['layout.tsx', 'library/page.tsx', 'matters/page.tsx', 'page.tsx', 'work/page.tsx'])
   })
 
   for (const file of pages) {

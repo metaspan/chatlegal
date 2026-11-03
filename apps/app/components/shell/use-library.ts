@@ -4,10 +4,16 @@ import { useEffect, useState } from 'react'
 import { workspaceFilesFromJson, type WorkspaceFile, type WorkspaceScope } from '@/lib/workspace/types'
 
 /**
- * Library on the left, and the open matter's files.
+ * The signed-in user's library, and the open matter's files when a matter is open.
+ * The workspace page calls this. The left pane does not.
  * The server scopes every request to the Clerk user. Move goes through
  * /api/workspace/move so a later Concierge can use the same call.
  */
+
+export type LibrarySeed = {
+  files?: readonly WorkspaceFile[]
+  error?: string | null
+}
 
 async function errorText(response: Response, fallback: string): Promise<string> {
   try {
@@ -19,10 +25,11 @@ async function errorText(response: Response, fallback: string): Promise<string> 
   return fallback
 }
 
-export function useLibrary(matterId: string | null) {
-  const [files, setFiles] = useState<WorkspaceFile[]>([])
-  const [loaded, setLoaded] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export function useLibrary(matterId: string | null, seed?: LibrarySeed) {
+  const seeded = seed?.files !== undefined || Boolean(seed?.error)
+  const [files, setFiles] = useState<WorkspaceFile[]>(() => (seed?.files ? [...seed.files] : []))
+  const [loaded, setLoaded] = useState(seeded && !seed?.error)
+  const [error, setError] = useState<string | null>(seed?.error ?? null)
   const [matterFiles, setMatterFiles] = useState<WorkspaceFile[]>([])
   const [matterLoaded, setMatterLoaded] = useState(false)
   const [matterError, setMatterError] = useState<string | null>(null)
