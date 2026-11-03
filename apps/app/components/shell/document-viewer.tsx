@@ -48,7 +48,7 @@ export function DocumentViewer({
       data-pane="viewer"
       data-viewer-kind={kind}
       className={cn(
-        'relative flex h-full shrink-0 flex-col border-l bg-background',
+        'relative flex h-full shrink-0 flex-col border-l bg-sidebar text-sidebar-foreground',
         'max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-30 max-md:w-full max-md:max-w-sm max-md:shadow-lg',
         'md:w-[min(var(--viewer-pane-width),calc(100vw-38rem))]',
         dragging && 'select-none',

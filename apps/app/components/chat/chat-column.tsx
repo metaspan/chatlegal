@@ -82,7 +82,7 @@ function ChatComposer({
   return (
     <form className="shrink-0 border-t p-3" onSubmit={onSubmit} data-slot="composer" data-draft-matter-id={matterId ?? ''}>
       <div
-        className="mx-auto flex w-full max-w-3xl flex-col gap-2 rounded-xl border bg-background p-2"
+        className="mx-auto flex w-full max-w-3xl flex-col gap-2 rounded-xl border bg-card p-2"
         onMouseDown={(event: MouseEvent<HTMLDivElement>) => {
           const target = event.target as HTMLElement
           if (target.closest('button, textarea, a, input')) return
