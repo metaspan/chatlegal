@@ -400,13 +400,158 @@ a:hover { text-decoration-thickness: 2px; }
 
 .home {
   min-height: 100vh;
-  padding-bottom: var(--footer-offset);
+  padding-bottom: calc(var(--footer-offset) + 1.5rem);
 }
 
-.home-panel {
-  max-width: 36rem;
+.home-rule {
+  height: 4px;
+  background: var(--banner-bg);
+}
+
+.home-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 46rem;
   margin: 0 auto;
-  padding: 4.5rem 1.25rem 3rem;
+  padding: 1rem 1.25rem 0;
+}
+
+.home-mark {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 1.45rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.home-docs {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.home-wrap {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 3rem;
+}
+
+.home-wrap h1 {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 2.7rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  margin: 0.35rem 0 0.8rem;
+}
+
+.home-lede {
+  margin: 0;
+  font-size: 1.08rem;
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem 1.25rem;
+  margin-top: 1.35rem;
+}
+
+.home-secondary {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.home-points {
+  list-style: none;
+  margin: 1.75rem 0 0;
+  padding: 0;
+}
+
+.home-points li {
+  margin: 0;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.home-source {
+  margin: 1.1rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.home-source a {
+  color: var(--muted);
+}
+
+.home-waitlist {
+  scroll-margin-top: 1.25rem;
+  margin-top: 2rem;
+  padding-top: 0.25rem;
+}
+
+.home-waitlist h2 {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 1.7rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.4rem;
+}
+
+.waitlist {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.waitlist label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.waitlist label span {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.waitlist input,
+.waitlist textarea {
+  width: 100%;
+  font: inherit;
+  font-weight: 400;
+  color: var(--ink);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  padding: 0.5rem 0.65rem;
+}
+
+.waitlist-note,
+.waitlist-fine {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.waitlist-fine a {
+  color: var(--muted);
+}
+
+.waitlist-hp {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.grecaptcha-badge {
+  visibility: hidden;
 }
 
 .eyebrow {
@@ -428,11 +573,26 @@ a:hover { text-decoration-thickness: 2px; }
 
 .home-cta {
   display: inline-block;
-  margin-top: 0.4rem;
+  margin-top: 0;
   text-decoration: none;
   background: var(--banner-bg);
   color: var(--banner-ink);
   border-color: transparent;
+}
+
+button.home-cta {
+  font: inherit;
+  cursor: pointer;
+  width: fit-content;
+}
+
+button.home-cta:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.home-cta:focus-visible {
+  outline-color: var(--banner-ink);
 }
 
 @media (max-width: 840px) {
@@ -444,7 +604,7 @@ a:hover { text-decoration-thickness: 2px; }
 
   .nav-open .sidebar { display: block; }
 
-  .home-panel h1 { font-size: 2.3rem; }
+  .home-wrap h1 { font-size: 2.15rem; }
 
   .prose h1 { font-size: 2rem; }
 }

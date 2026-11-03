@@ -12,7 +12,7 @@
     "dev": "next dev",
     "prebuild": "node --experimental-strip-types scripts/assert-docs-root.ts && node --experimental-strip-types scripts/assert-routes.ts && node --experimental-strip-types scripts/write-llms.ts",
     "build": "next build",
-    "postbuild": "node --experimental-strip-types scripts/patch-home-redirect.ts && node --experimental-strip-types scripts/assert-export.ts",
+    "postbuild": "node --experimental-strip-types scripts/assert-export.ts",
     "preview": "python3 -m http.server 4173 --directory out"
   },
   "dependencies": {

@@ -45,7 +45,7 @@ server {
 }
 ```
 
-`out/index.html` also sends `/` to `/docs/` with a meta refresh, and the page links there, so the docroot works before any extra redirect rule. TLS, DNS, and the rsync itself are Ops work and are not part of this milestone.
+`/` is the marketing landing, not a redirect. `/docs/` is the documentation. TLS, DNS, and the rsync itself are separate from this app. The static files do not include a server.
 
 Preview the export locally with `yarn preview` (port 4173) after a build.
 
@@ -59,7 +59,7 @@ The build reads the sibling repository `docs/` directory. It does not fetch cont
 
 ## Routes
 
-`/` sends people to `/docs/`. Everything else in the public tree is under `/docs/` and matches the plan’s URL tree, including:
+`/` is the landing page, with a beta waitlist form. Everything else in the public tree is under `/docs/` and matches the plan’s URL tree, including:
 
 - `/docs/housing/possession-notice/` and `/docs/housing/deposit/` (eval set, still placeholders)
 - `/docs/housing/illegal-eviction/` (planned, hard-escalate callout)
@@ -70,3 +70,31 @@ The build reads the sibling repository `docs/` directory. It does not fetch cont
 - `/docs/referrals/`, `/docs/policies/`, `/docs/for-agents/`
 
 Find a page in the sidebar searches titles. It is not a chat box.
+
+## Beta waitlist
+
+The form on `/` posts JSON to the same origin, `POST /api/waitlist`. It does not call the webhook from the browser. A direct browser call would send `Authorization`, which is not a CORS-safelisted header, so a typical webhook fails the preflight. The static export has no API route. Until something answers `/api/waitlist`, the form shows that signups are not being accepted.
+
+`apps/site/ops/waitlist-proxy.mjs` is a small Node 22 process that can sit beside nginx. It is not copied into `out/`.
+
+Request body:
+
+```json
+{ "email": "", "name": "", "note": "", "source": "chatlegal.uk", "recaptchaToken": "" }
+```
+
+The proxy checks reCAPTCHA v3 with `RECAPTCHA_SECRET_KEY` (`action` `waitlist`, score at least 0.5). It then POSTs `{ "email", "name", "note", "source": "chatlegal.uk" }` to `CHATLEGAL_WAITLIST_WEBHOOK_URL`, with `CHATLEGAL_WAITLIST_WEBHOOK_HEADER` as the `Authorization` value when that variable is set. The token and the secret are not forwarded. If `company` or `website` is non-empty, the proxy returns success and does not call Google or the webhook. The form also drops those honeypot values in the browser and does not send them.
+
+Responses: `200` `{ "ok": true }`, `400` `{ "ok": false, "error": "captcha" }` or `"email"`, `502` `"webhook"`, `503` `"unconfigured"`.
+
+Build-time public env is only `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` (see `.env.example`). Leave it blank and the form stays disabled: “Waitlist opening soon.” The webhook URL and both secrets are server env on the proxy, not `NEXT_PUBLIC_*`.
+
+```nginx
+location = /api/waitlist {
+    proxy_pass http://127.0.0.1:3001;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+
+Run the proxy with Node 22 from `apps/site`, bound to localhost, and keep the rest of the server as the static `out/` docroot. Do not put the proxy env in the static build.

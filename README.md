@@ -1,10 +1,16 @@
 # ChatLegal
 
-UK citizen legal-**information** product ([chatlegal.uk](https://chatlegal.uk)).
+UK citizen legal information ([chatlegal.uk](https://chatlegal.uk)).
 
-**Not a solicitor. Not legal advice.** Information, triage, and cited retrieval for everyday problems (housing, employment, consumer, welfare), with clear escalation when a lawyer or official process is needed.
+ChatLegal explains everyday problems in plain English and points to official sources. It is information, triage, and cited retrieval. It is not a solicitor, and it is not Citizens Advice.
 
-Plan-mode documentation lives in [`docs/`](docs/). The public docs site is [`apps/site`](apps/site/) (Next.js static export, Node 22). [`apps/app`](apps/app/) is reserved for later chat and is not built.
+**Not a solicitor. Not legal advice.**
+
+- Plain-English explanations, with citations to official sources.
+- A case type and a protocol, rather than an open-ended chat.
+- Money, crime, immigration, children, and hard deadlines are handed on to a person or an official process.
+
+Public docs: [chatlegal.uk/docs](https://chatlegal.uk/docs/). Plan-mode documentation in this repository is [`docs/`](docs/). The site is [`apps/site`](apps/site/) (Next.js static export, Node 22). [`apps/app`](apps/app/) is reserved for later chat and is not built.
 
 ## Docs map
 

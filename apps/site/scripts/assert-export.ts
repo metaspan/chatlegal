@@ -73,12 +73,27 @@ if (!eviction.toLowerCase().includes('hard-escalate')) {
 }
 
 const home = read('index.html')
-if (!/http-equiv=["']refresh["'][^>]*url=\/docs\//i.test(home) && !home.includes('url=/docs/')) {
-  console.error('out/index.html does not refresh to /docs/')
+if (/http-equiv=["']refresh["']/i.test(home)) {
+  console.error('out/index.html still meta-refreshes away from the landing page')
   process.exit(1)
 }
-if (!home.includes('href="/docs/"') && !home.includes('href="/docs"')) {
-  console.error('out/index.html has no link to /docs/')
+for (const snippet of [
+  'Join the beta waitlist',
+  'Read the docs',
+  'id="waitlist"',
+  'href="/docs/"',
+  'https://github.com/metaspan/chatlegal',
+  'Source &amp; project brief on GitHub',
+  disclaimer,
+  'class="disclaimer"',
+]) {
+  if (!home.includes(snippet)) {
+    console.error(`Landing page is missing ${JSON.stringify(snippet)}`)
+    process.exit(1)
+  }
+}
+if (!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY?.trim() && !home.includes('Waitlist opening soon')) {
+  console.error('Landing page should show the closed waitlist when the site key is unset')
   process.exit(1)
 }
 
@@ -110,11 +125,31 @@ function walk(dir: string): string[] {
   return files
 }
 
-const blocked = /officialinjuryclaim|oic\.gov|textarea|ask a question/i
+const blocked = /officialinjuryclaim|oic\.gov|ask a question/i
+const secretNames = /RECAPTCHA_SECRET_KEY|CHATLEGAL_WAITLIST_WEBHOOK_URL|CHATLEGAL_WAITLIST_WEBHOOK_HEADER/
+function walkFiles(dir: string): string[] {
+  const files: string[] = []
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) files.push(...walkFiles(full))
+    else files.push(full)
+  }
+  return files
+}
+
 for (const file of walk(outDir)) {
   const html = fs.readFileSync(file, 'utf8')
-  if (blocked.test(html)) {
-    console.error(`Unexpected content in ${path.relative(outDir, file)}`)
+  const relative = path.relative(outDir, file)
+  if (blocked.test(html) || (relative !== 'index.html' && /textarea/i.test(html))) {
+    console.error(`Unexpected content in ${relative}`)
+    process.exit(1)
+  }
+}
+
+for (const file of walkFiles(outDir)) {
+  const text = fs.readFileSync(file, 'utf8')
+  if (secretNames.test(text)) {
+    console.error(`Static export contains a server env name: ${path.relative(outDir, file)}`)
     process.exit(1)
   }
 }
