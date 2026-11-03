@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Banner } from '@/components/Banner'
+import { Disclaimer } from '@/components/Disclaimer'
 
 export const metadata: Metadata = {
   title: { absolute: 'ChatLegal' },
@@ -12,7 +12,6 @@ export default function HomePage() {
   return (
     <main className="home">
       <meta httpEquiv="refresh" content="0; url=/docs/" />
-      <Banner />
       <div className="home-panel">
         <p className="eyebrow">chatlegal.uk</p>
         <h1>ChatLegal docs</h1>
@@ -23,6 +22,7 @@ export default function HomePage() {
           </a>
         </p>
       </div>
+      <Disclaimer />
     </main>
   )
 }

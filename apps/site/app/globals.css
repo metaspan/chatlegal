@@ -11,7 +11,8 @@
   --pill-bg: #efe4d4;
   --shadow: 0 1px 0 rgba(34, 28, 22, 0.06);
   color-scheme: light;
-  --top-offset: 6.25rem;
+  --top-offset: 3.5rem;
+  --footer-offset: 2rem;
 }
 
 html[data-theme='dark'] {
@@ -73,19 +74,24 @@ a:hover { text-decoration-thickness: 2px; }
 
 .skip:focus { transform: none; }
 
-.banner {
+.disclaimer {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 25;
   margin: 0;
-  min-height: 2.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.45rem 1rem;
-  background: var(--banner-bg);
-  color: var(--banner-ink);
-  font-weight: 700;
+  padding: 0.28rem 1rem;
+  border-top: 1px solid var(--line);
+  background: var(--bg-raised);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.4;
   text-align: center;
-  letter-spacing: 0.01em;
 }
+
+.disclaimer p { margin: 0; }
 
 .sticky-top {
   position: sticky;
@@ -151,9 +157,9 @@ a:hover { text-decoration-thickness: 2px; }
 .sidebar {
   position: sticky;
   top: var(--top-offset);
-  max-height: calc(100vh - var(--top-offset));
+  max-height: calc(100vh - var(--top-offset) - var(--footer-offset));
   overflow: auto;
-  padding: 1rem 0.85rem 2rem;
+  padding: 1rem 0.85rem 2.5rem;
   border-right: 1px solid var(--line);
   background: var(--bg-raised);
 }
@@ -256,7 +262,7 @@ a:hover { text-decoration-thickness: 2px; }
 
 .content {
   scroll-margin-top: var(--top-offset);
-  padding: 1.5rem 1.25rem 3rem;
+  padding: 1.5rem 1.25rem 3.5rem;
 }
 
 .content:focus { outline: none; }
@@ -353,14 +359,10 @@ a:hover { text-decoration-thickness: 2px; }
   text-transform: uppercase;
 }
 
-.colophon {
-  max-width: 42rem;
-  margin-top: 1.25rem;
-  color: var(--muted);
-  font-size: 0.92rem;
+.home {
+  min-height: 100vh;
+  padding-bottom: var(--footer-offset);
 }
-
-.home { min-height: 100vh; }
 
 .home-panel {
   max-width: 36rem;

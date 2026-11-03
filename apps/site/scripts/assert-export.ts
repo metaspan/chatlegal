@@ -15,7 +15,7 @@ function read(relative: string): string {
   return fs.readFileSync(file, 'utf8')
 }
 
-const banner = 'Not a solicitor. Not legal advice.'
+const disclaimer = 'Not a solicitor. Not legal advice.'
 const major = [
   'docs/index.html',
   'docs/how-it-works/index.html',
@@ -37,8 +37,12 @@ const major = [
 
 for (const relative of major) {
   const html = read(relative)
-  if (!html.includes(banner)) {
-    console.error(`${relative} is missing the not-legal-advice banner`)
+  if (!html.includes(disclaimer) || !html.includes('class="disclaimer"')) {
+    console.error(`${relative} is missing the sticky disclaimer footer`)
+    process.exit(1)
+  }
+  if (html.includes('class="banner"')) {
+    console.error(`${relative} still has the top banner`)
     process.exit(1)
   }
 }
@@ -64,7 +68,7 @@ if (!llms.startsWith('# ChatLegal docs')) {
   console.error('llms.txt is missing its title')
   process.exit(1)
 }
-if (!llms.includes(banner)) {
+if (!llms.includes(disclaimer)) {
   console.error('llms.txt is missing the not-legal-advice line')
   process.exit(1)
 }

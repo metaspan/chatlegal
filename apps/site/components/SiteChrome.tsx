@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useId, useState, type ReactNode } from 'react'
-import { Banner } from '@/components/Banner'
+import { Disclaimer } from '@/components/Disclaimer'
 import {
   flattenNav,
   navGroups,
@@ -51,7 +51,6 @@ export function SiteChrome({ children }: { children: ReactNode }) {
         Skip to content
       </a>
       <div className="sticky-top">
-        <Banner />
         <header className="mast">
           <button
             type="button"
@@ -140,11 +139,9 @@ export function SiteChrome({ children }: { children: ReactNode }) {
               <span />
             )}
           </nav>
-          <footer className="colophon">
-            <p>Not a solicitor. Not legal advice.</p>
-          </footer>
         </main>
       </div>
+      <Disclaimer />
     </div>
   )
 }
