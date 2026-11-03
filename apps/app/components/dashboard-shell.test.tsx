@@ -99,15 +99,23 @@ describe('dashboard shell', () => {
         onNewChat: () => {},
         creating: false,
         onCollapse: () => {},
-        libraryNote: null,
-        onAddFile: () => {},
+        ...libraryProps({
+          libraryFiles: [{ name: 'notice.txt', size: 4, updatedAt: '2026-11-03T00:00:00.000Z' }],
+          matterFiles: [{ name: 'reply.txt', size: 5, updatedAt: '2026-11-03T00:00:00.000Z' }],
+        }),
       }),
     )
     assert.match(history, /Search/)
     assert.match(history, /New chat/)
     assert.match(history, /Library/)
     assert.match(history, /History/)
-    assert.match(history, /No files yet/)
+    assert.match(history, /data-library-file="notice.txt"/)
+    assert.match(history, /Move notice\.txt to this matter/)
+    assert.match(history, /data-matter-files="matter-1"/)
+    assert.match(history, /data-matter-file="reply.txt"/)
+    assert.match(history, /Move reply\.txt to your library/)
+    assert.match(history, /Add a file/)
+    assert.doesNotMatch(history, /No files yet/)
     assert.match(history, /One matter is one chat/)
     assert.match(history, /Deposit/)
     assert.match(history, /data-matter-id="matter-1"/)
@@ -125,11 +133,12 @@ describe('dashboard shell', () => {
         onNewChat: () => {},
         creating: false,
         onCollapse: () => {},
-        libraryNote: null,
-        onAddFile: () => {},
+        ...libraryProps(),
       }),
     )
     assert.match(emptyHistory, /No matters yet/)
+    assert.match(emptyHistory, /No files yet/)
+    assert.match(emptyHistory, /Open a matter to see its files/)
 
     const failedHistory = renderToStaticMarkup(
       createElement(HistoryPane, {
@@ -143,8 +152,7 @@ describe('dashboard shell', () => {
         onNewChat: () => {},
         creating: false,
         onCollapse: () => {},
-        libraryNote: null,
-        onAddFile: () => {},
+        ...libraryProps(),
       }),
     )
     assert.match(failedHistory, /Matters could not be loaded/)
@@ -161,6 +169,7 @@ describe('dashboard shell', () => {
     const bar = fs.readFileSync(path.join(here, 'shell/app-bar.tsx'), 'utf8')
     const combined = shell + bar
     assert.match(shell, /HistoryPane/)
+    assert.match(shell, /useLibrary/)
     assert.match(shell, /useMatterSessions/)
     assert.match(shell, /writeDraft/)
     assert.match(shell, /ChatColumn/)
@@ -179,5 +188,28 @@ describe('dashboard shell', () => {
     assert.match(bar, /SignOutControl/)
     assert.match(bar, /UserButton/)
     assert.doesNotMatch(combined, /CompanySwitcher|OrganizationSwitcher/)
+    const libraryHook = fs.readFileSync(path.join(here, 'shell/use-library.ts'), 'utf8')
+    assert.match(libraryHook, /\/api\/library/)
+    assert.match(libraryHook, /\/api\/matters\//)
+    assert.match(libraryHook, /\/api\/workspace\/move/)
+    assert.match(libraryHook, /kind: 'user'/)
+    assert.match(libraryHook, /kind: 'matter'/)
   })
 })
+
+function libraryProps(overrides: Record<string, unknown> = {}) {
+  return {
+    libraryFiles: [],
+    libraryLoaded: true,
+    libraryError: null,
+    addingFile: false,
+    onAddFile: () => true,
+    matterFiles: [],
+    matterFilesLoaded: true,
+    matterFilesError: null,
+    movingName: null,
+    onMoveToMatter: () => {},
+    onMoveToLibrary: () => {},
+    ...overrides,
+  }
+}

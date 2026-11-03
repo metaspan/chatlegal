@@ -145,6 +145,11 @@ async function ownedThread(
   return thread
 }
 
+/** True when this Clerk user owns the matter thread. A stranger's id is false. */
+export async function userOwnsMatter(store: MatterStore, userId: string, matterId: string): Promise<boolean> {
+  return (await ownedThread(store, userId, matterId)) !== null
+}
+
 export async function getMatterThread(
   store: MatterStore,
   userId: string,

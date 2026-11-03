@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
+import { withProcessEnvLock } from './process-env-lock.ts'
 
 /**
  * The page modules run for real. CHATLEGAL_TEST_SESSION stands in for the
@@ -29,6 +30,7 @@ const pages = [
 describe('guarded pages redirect to /sign-in without a session', () => {
   for (const { title, module } of pages) {
     it(`${title} redirects`, async () => {
+      await withProcessEnvLock(async () => {
       process.env.CHATLEGAL_TEST_SESSION = 'unsigned'
       const { default: page } = (await import(module)) as { default: PageComponent }
       await assert.rejects(
@@ -40,12 +42,14 @@ describe('guarded pages redirect to /sign-in without a session', () => {
           return true
         },
       )
+      })
     })
   }
 })
 
 describe('signed-in home shows the Consumer session', () => {
   it('renders the test user id and does not claim to act for the user', async () => {
+    await withProcessEnvLock(async () => {
     process.env.CHATLEGAL_TEST_SESSION = 'signed-in'
     const { default: page } = (await import('../app/(app)/page.tsx')) as { default: PageComponent }
     const text = textOf(await page())
@@ -54,5 +58,6 @@ describe('signed-in home shows the Consumer session', () => {
     assert.match(text, /user_test/)
     assert.match(text, /sess_test/)
     assert.doesNotMatch(text, /I act for you|your solicitor|we represent/i)
+    })
   })
 })

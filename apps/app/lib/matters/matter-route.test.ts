@@ -3,11 +3,13 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { withProcessEnvLock } from '../process-env-lock.ts'
 import { matterResourceId } from './resource.ts'
 import { createMatter, disconnectMatterStore, getMatterStore } from './store.ts'
 
 describe('open matter route', () => {
   it('returns 404 for another user and does not include their summary', async () => {
+    await withProcessEnvLock(async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chatlegal-matter-route-'))
     const previousDb = process.env.CHATLEGAL_MATTERS_DB
     const previousSession = process.env.CHATLEGAL_TEST_SESSION
@@ -71,5 +73,6 @@ describe('open matter route', () => {
       else process.env.CHATLEGAL_TEST_SESSION = previousSession
       fs.rmSync(dir, { recursive: true, force: true })
     }
+    })
   })
 })

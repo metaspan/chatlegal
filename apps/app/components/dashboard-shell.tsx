@@ -6,6 +6,7 @@ import { DisclaimerBar } from '@/components/disclaimer-bar'
 import { AppBar } from '@/components/shell/app-bar'
 import { DocumentViewer } from '@/components/shell/document-viewer'
 import { HistoryPane } from '@/components/shell/history-pane'
+import { useLibrary } from '@/components/shell/use-library'
 import { useMatterSessions } from '@/components/shell/use-matter-sessions'
 import { usePaneOpen } from '@/components/shell/use-pane-open'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -34,8 +35,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false)
   const [query, setQuery] = useState('')
   const [drafts, setDrafts] = useState<Record<string, string>>({})
-  const [libraryNote, setLibraryNote] = useState<string | null>(null)
   const mattersSession = useMatterSessions()
+  const library = useLibrary(mattersSession.activeId)
   const isMobile = useIsMobile()
   const copy = matterThreadCopy({
     title: mattersSession.active?.title ?? null,
@@ -118,8 +119,17 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               }}
               creating={mattersSession.creating}
               onCollapse={() => (narrow ? setMobileLeft(false) : setLeftOpen(false))}
-              libraryNote={libraryNote}
-              onAddFile={() => setLibraryNote('Adding files is not connected yet.')}
+              libraryFiles={library.files}
+              libraryLoaded={library.loaded}
+              libraryError={library.error}
+              addingFile={library.adding}
+              onAddFile={library.addFile}
+              matterFiles={library.matterFiles}
+              matterFilesLoaded={library.matterLoaded}
+              matterFilesError={library.matterError}
+              movingName={library.movingName}
+              onMoveToMatter={library.moveToMatter}
+              onMoveToLibrary={library.moveToLibrary}
             />
           </div>
         ) : null}

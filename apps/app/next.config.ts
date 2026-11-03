@@ -4,7 +4,7 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  // Mastra and libSQL stay on the server. The client only calls /api/matters.
+  // Mastra and libSQL stay on the server. The client calls the matter, library, and move routes.
   serverExternalPackages: ['@mastra/core', '@mastra/memory', '@mastra/libsql', '@libsql/client', 'libsql'],
 }
 
