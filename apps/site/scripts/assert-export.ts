@@ -16,6 +16,7 @@ function read(relative: string): string {
 }
 
 const disclaimer = 'Not a solicitor. Not legal advice.'
+const welshPhase1Chrome = 'we do not yet offer a full Welsh product'
 const major = [
   'docs/index.html',
   'docs/how-it-works/index.html',
@@ -142,6 +143,10 @@ for (const file of walk(outDir)) {
   const relative = path.relative(outDir, file)
   if (blocked.test(html) || (relative !== 'index.html' && /textarea/i.test(html))) {
     console.error(`Unexpected content in ${relative}`)
+    process.exit(1)
+  }
+  if (html.includes(welshPhase1Chrome)) {
+    console.error(`${relative} still has the Welsh Phase-1 footer line`)
     process.exit(1)
   }
 }
