@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ChatColumn } from './chat/chat-column.tsx'
+import { ComposerView } from './chat/composer/composer.tsx'
+import { createComposerController } from './chat/composer/composer-controller.ts'
 import { composerSendsOnEnter } from '../lib/chat-composer.ts'
 import { basicPlanUsage } from '../lib/plan-usage.ts'
 import { DisclaimerBar } from './disclaimer-bar.tsx'
@@ -291,7 +293,8 @@ describe('dashboard shell', () => {
     assert.match(shell, /libraryActive=\{pathname === '\/library'\}/)
     assert.match(shell, /usePathname/)
     assert.match(shell, /useMatterSessions/)
-    assert.match(shell, /writeDraft/)
+    assert.match(shell, /optimistic: false/)
+    assert.match(fs.readFileSync(path.join(here, 'chat/composer/composer-controller.ts'), 'utf8'), /flushQueue/)
     assert.match(shell, /sendMessage/)
     assert.match(shell, /answerWidget/)
     assert.match(shell, /onSend=/)
@@ -349,6 +352,53 @@ describe('dashboard shell', () => {
     assert.match(libraryHook, /\/api\/workspace\/move/)
     assert.match(libraryHook, /kind: 'user'/)
     assert.match(libraryHook, /kind: 'matter'/)
+  })
+
+  it('shows a waiting message with a quiet retry', async () => {
+    const offline = createComposerController({
+      matterId: 'matter-1',
+      ready: true,
+      connection: 'offline',
+      makeId: () => 'q-offline',
+      schedule: () => () => {},
+      controls: { send: async () => ({ ok: false, reason: 'failed' }) },
+    })
+    offline.setText('When is the deadline?')
+    await offline.primary()
+    const waiting = renderToStaticMarkup(
+      createElement(ComposerView, { state: offline.getState(), controller: offline, threadStatus: 'ready' }),
+    )
+    assert.match(waiting, /data-slot="composer-queue"/)
+    assert.match(waiting, /data-queue-state="pending"/)
+    assert.match(waiting, /data-connection="offline"/)
+    assert.match(waiting, /When is the deadline\?/)
+    assert.match(waiting, />Waiting</)
+    assert.match(waiting, /offline/)
+    assert.match(waiting, /sends when the connection returns/)
+    assert.match(waiting, />Try again</)
+    assert.match(waiting, /border-l-chrome/)
+    assert.match(waiting, /aria-label="Waiting to send"/)
+    assert.doesNotMatch(waiting, /text-destructive/)
+
+    const failed = createComposerController({
+      matterId: 'matter-1',
+      ready: true,
+      makeId: () => 'q-failed',
+      schedule: () => () => {},
+      controls: { send: async () => ({ ok: false, reason: 'timeout' }) },
+    })
+    failed.setText('The notice arrived on Friday.')
+    await failed.primary()
+    const retry = renderToStaticMarkup(
+      createElement(ComposerView, { state: failed.getState(), controller: failed, threadStatus: 'ready' }),
+    )
+    assert.match(retry, /data-queue-state="failed"/)
+    assert.match(retry, /Not saved yet/)
+    assert.match(retry, /That took too long/)
+    assert.match(retry, />Try again</)
+    assert.match(retry, /border-l-chrome/)
+    assert.match(retry, /The notice arrived on Friday\./)
+    assert.doesNotMatch(retry, /text-destructive/)
   })
 })
 

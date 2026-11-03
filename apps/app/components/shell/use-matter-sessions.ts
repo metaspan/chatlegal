@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { isSendTimeout, sendAbortSignal } from '@/lib/chat/send-timeout'
 import {
   isStoredMatterMessage,
   messagesAfterReload,
@@ -27,7 +28,9 @@ type MatterCreateResponse = { matter?: MatterSummary }
  * Left-pane history and the centre thread for the signed-in user.
  * The server scopes every request to the Clerk user id. This hook only
  * keeps the open matter and its draft attachment on the client.
- * Send appends the user's words on that matter. A model reply is not requested.
+ * Send appends the user's words on that matter. A failed or timed-out send
+ * returns without dropping the caller's copy; the composer queue keeps it.
+ * A model reply is not requested.
  * An askChoice card already on the matter can be answered here. The pick is
  * stored on that same thread. TODO(G-01 Concierge): stream the assistant reply
  * after the message is stored, and emit askChoice from the model.
@@ -126,15 +129,20 @@ export function useMatterSessions() {
     }
   }, [activeId])
 
-  async function sendMessage(text: string): Promise<boolean> {
-    const matterId = activeIdRef.current
-    if (!matterId) return false
+  async function sendMessage(
+    text: string,
+    forMatterId?: string | null,
+    options?: { optimistic?: boolean },
+  ): Promise<{ ok: true } | { ok: false; reason: 'invalid' | 'timeout' | 'failed' }> {
+    const matterId = forMatterId || activeIdRef.current
+    if (!matterId) return { ok: false, reason: 'failed' }
+    const optimisticOn = options?.optimistic !== false
     let parsed: string
     try {
       parsed = resolveMatterMessageText(text)
     } catch {
-      setSendError('Write a message before sending.')
-      return false
+      if (activeIdRef.current === matterId) setSendError('Write a message before sending.')
+      return { ok: false, reason: 'invalid' }
     }
     const optimistic: MatterMessage = {
       id: `local:${crypto.randomUUID()}`,
@@ -143,20 +151,27 @@ export function useMatterSessions() {
       createdAt: new Date().toISOString(),
       pending: true,
     }
+    const viewing = () => activeIdRef.current === matterId
     sendSeq.current += 1
     setSendError(null)
     setSendingId(matterId)
-    setThread((current) => {
-      if (!current || current.matter.id !== matterId) return current
-      return { ...current, messages: messagesWithOptimistic(current.messages, optimistic) }
-    })
+    if (optimisticOn) {
+      setThread((current) => {
+        if (!current || current.matter.id !== matterId) return current
+        return { ...current, messages: messagesWithOptimistic(current.messages, optimistic) }
+      })
+    }
     try {
       const response = await fetch(`/api/matters/${encodeURIComponent(matterId)}/messages`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ text: parsed }),
         cache: 'no-store',
+        signal: sendAbortSignal(),
       })
+      if (response.status === 408 || response.status === 504) {
+        throw Object.assign(new Error('timed out'), { name: 'TimeoutError' })
+      }
       if (!response.ok) throw new Error('send')
       const body = (await response.json()) as { message?: unknown }
       if (!isStoredMatterMessage(body.message) || body.message.role !== 'user') throw new Error('send')
@@ -166,26 +181,25 @@ export function useMatterSessions() {
           .map((matter) => (matter.id === matterId ? { ...matter, updatedAt: saved.createdAt } : matter))
           .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id)),
       )
-      if (activeIdRef.current === matterId) {
+      if (viewing()) {
         setThread((current) => {
           if (!current || current.matter.id !== matterId) return current
           return {
             ...current,
             matter: { ...current.matter, updatedAt: saved.createdAt },
-            messages: messagesWithSaved(current.messages, optimistic.id, saved),
+            messages: messagesWithSaved(current.messages, optimisticOn ? optimistic.id : saved.id, saved),
           }
         })
       }
-      return true
-    } catch {
-      if (activeIdRef.current === matterId) {
+      return { ok: true }
+    } catch (error) {
+      if (optimisticOn && viewing()) {
         setThread((current) => {
           if (!current || current.matter.id !== matterId) return current
           return { ...current, messages: current.messages.filter((message) => message.id !== optimistic.id) }
         })
-        setSendError('That message was not saved. Try again.')
       }
-      return false
+      return { ok: false, reason: isSendTimeout(error) ? 'timeout' : 'failed' }
     } finally {
       setSendingId((current) => (current === matterId ? null : current))
     }

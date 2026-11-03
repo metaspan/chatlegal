@@ -12,7 +12,6 @@ import { RightPaneActionsProvider, type RightPaneOpenRequest } from '@/component
 import { useMatterSessions } from '@/components/shell/use-matter-sessions'
 import { usePaneOpen } from '@/components/shell/use-pane-open'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { draftText, writeDraft } from '@/lib/matters/draft'
 import { matterHistoryDetail, matterThreadCopy } from '@/lib/matters/present'
 import {
   defaultRightPaneView,
@@ -71,7 +70,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const focusChatsOnOpen = useRef(false)
   const pathname = usePathname()
   const [query, setQuery] = useState('')
-  const [drafts, setDrafts] = useState<Record<string, string>>({})
   const mattersSession = useMatterSessions()
   const [rightPane, setRightPane] = useState<RightPaneView>(() => defaultRightPaneView())
   const activeMatterId = mattersSession.activeId
@@ -237,13 +235,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           messages={mattersSession.messages}
           threadStatus={mattersSession.threadStatus}
           observations={mattersSession.observations}
-          draft={draftText(drafts, mattersSession.activeId)}
-          onDraftChange={(text) => {
-            const matterId = mattersSession.activeId
-            if (!matterId) return
-            setDrafts((current) => writeDraft(current, matterId, text))
-          }}
-          sending={mattersSession.sending}
           sendError={mattersSession.sendError}
           answeringWidgetId={mattersSession.answeringWidgetId}
           widgetError={mattersSession.widgetError}
@@ -255,19 +246,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             void mattersSession.createMatterSession()
           }}
           creating={mattersSession.creating}
-          onSend={async (text) => {
-            const matterId = mattersSession.activeId
-            if (!matterId) return false
-            setDrafts((current) => writeDraft(current, matterId, ''))
-            const saved = await mattersSession.sendMessage(text)
-            if (!saved) {
-              setDrafts((current) => {
-                if (draftText(current, matterId).trim()) return current
-                return writeDraft(current, matterId, text)
-              })
-            }
-            return saved
-          }}
+          onSend={(text, matterId) => mattersSession.sendMessage(text, matterId, { optimistic: false })}
         >
           {children}
         </ChatColumn>
