@@ -5,7 +5,17 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { matterResourceId } from './resource.ts'
-import { appendMatterMessage, createMatter, createMatterStore, getMatterThread, listMatters, type MatterStore } from './store.ts'
+import { parseAskChoiceProps } from './ask-choice.ts'
+import {
+  answerAskChoice,
+  appendAskChoice,
+  appendMatterMessage,
+  createMatter,
+  createMatterStore,
+  getMatterThread,
+  listMatters,
+  type MatterStore,
+} from './store.ts'
 
 async function withStore(run: (store: MatterStore) => Promise<void>) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chatlegal-matters-'))
@@ -105,6 +115,86 @@ describe('mastra matter store', () => {
       assert.equal(shown.includes('do-not-show'), false)
       assert.equal(shown.includes('json-dump'), false)
       assert.equal(shown.includes('call-1'), false)
+    })
+  })
+
+  it('stores an askChoice card on the matter and refuses a second pick', async () => {
+    await withStore(async (store) => {
+      const matter = await createMatter(store, 'user_a', { title: 'Deposit' })
+      const other = await createMatter(store, 'user_a', { title: 'Parking' })
+      const props = parseAskChoiceProps({
+        question: 'Which route fits this notice?',
+        options: [
+          { id: 'scheme', label: 'Deposit scheme' },
+          { id: 'court', label: 'Court' },
+        ],
+        recommended: 'scheme',
+      })
+      assert.equal(await appendAskChoice(store, 'user_b', matter.id, props), null)
+      const saved = await appendAskChoice(store, 'user_a', matter.id, props)
+      assert.equal(saved?.widget?.status, 'pending')
+      assert.equal(saved?.widget?.question, 'Which route fits this notice?')
+      assert.equal(saved?.role, 'assistant')
+      const toolCallId = saved?.widget?.toolCallId
+      assert.ok(toolCallId)
+
+      const opened = await getMatterThread(store, 'user_a', matter.id)
+      assert.equal(opened?.messages[0]?.widget?.toolCallId, toolCallId)
+      assert.equal(opened?.messages[0]?.tools, undefined)
+      assert.equal(JSON.stringify(opened?.messages).includes('widgetVersion'), false)
+      assert.deepEqual((await getMatterThread(store, 'user_a', other.id))?.messages, [])
+      assert.equal(await getMatterThread(store, 'user_b', matter.id), null)
+
+      const [first, second] = await Promise.all([
+        answerAskChoice(store, 'user_a', matter.id, toolCallId, { choice: 'scheme' }),
+        answerAskChoice(store, 'user_a', matter.id, toolCallId, { choice: 'court' }),
+      ])
+      const results = [first, second]
+      assert.equal(results.filter((result) => result.ok).length, 1)
+      assert.equal(results.filter((result) => !result.ok && result.reason === 'answered').length, 1)
+      const winner = results.find((result) => result.ok)
+      assert.ok(winner && winner.ok)
+      const stored = await getMatterThread(store, 'user_a', matter.id)
+      assert.equal(stored?.messages[0]?.widget?.status, 'answered')
+      assert.deepEqual(stored?.messages[0]?.widget?.answer, winner.message.widget?.answer)
+      const again = await answerAskChoice(store, 'user_a', matter.id, toolCallId, { choice: 'court' })
+      assert.equal(again.ok, false)
+      if (!again.ok) assert.equal(again.reason, 'answered')
+      assert.deepEqual((await getMatterThread(store, 'user_a', matter.id))?.messages[0]?.widget?.answer, winner.message.widget?.answer)
+      assert.deepEqual(await answerAskChoice(store, 'user_b', matter.id, toolCallId, { choice: 'court' }), { ok: false, reason: 'missing' })
+    })
+  })
+
+  it('stores a multi-select pick and refuses an option that was not offered', async () => {
+    await withStore(async (store) => {
+      const matter = await createMatter(store, 'user_a', { title: 'Papers' })
+      const saved = await appendAskChoice(
+        store,
+        'user_a',
+        matter.id,
+        parseAskChoiceProps({
+          question: 'Which papers do you have?',
+          multiSelect: true,
+          maxSelected: 2,
+          options: [
+            { id: 'tenancy', label: 'Tenancy' },
+            { id: 'certificate', label: 'Certificate' },
+            { id: 'photos', label: 'Photos' },
+          ],
+        }),
+      )
+      const toolCallId = saved?.widget?.toolCallId ?? ''
+      const bad = await answerAskChoice(store, 'user_a', matter.id, toolCallId, { choices: ['tenancy', 'nope'] })
+      assert.equal(bad.ok, false)
+      if (!bad.ok) {
+        assert.equal(bad.reason, 'invalid')
+        if (bad.reason === 'invalid') assert.ok(bad.issues.includes('choices: not_an_option'))
+      }
+      const good = await answerAskChoice(store, 'user_a', matter.id, toolCallId, { choices: ['tenancy', 'certificate'] })
+      assert.equal(good.ok, true)
+      const opened = await getMatterThread(store, 'user_a', matter.id)
+      assert.deepEqual(opened?.messages[0]?.widget?.answer, { choices: ['tenancy', 'certificate'] })
+      assert.equal(opened?.messages[0]?.widget?.multiSelect, true)
     })
   })
 

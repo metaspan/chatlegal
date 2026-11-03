@@ -7,7 +7,7 @@ import { MatterSummary } from '@/components/shell/matter-summary'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { composerSendsOnEnter } from '@/lib/chat-composer'
-import type { MatterMessage, MatterObservations, MatterThreadStatus } from '@/lib/matters/types'
+import type { AskChoiceAnswer, MatterMessage, MatterObservations, MatterThreadStatus } from '@/lib/matters/types'
 
 /**
  * Centre column: the open matter's messages and a text box.
@@ -16,6 +16,7 @@ import type { MatterMessage, MatterObservations, MatterThreadStatus } from '@/li
  * (bordered field, message label, send row). Attachments, queue, steer, and
  * stop stay out: there is no model run yet.
  * TODO(G-01 Concierge): stream the assistant reply after Send stores the user's words.
+ * An askChoice card already stored on the matter renders here. The model does not emit one yet.
  * The draft is kept against the open matter id by the shell.
  */
 export function ChatColumn({
@@ -26,6 +27,9 @@ export function ChatColumn({
   draft,
   onDraftChange,
   onSend,
+  onAnswerWidget,
+  answeringWidgetId = null,
+  widgetError = null,
   onNewChat,
   creating = false,
   sending = false,
@@ -41,6 +45,9 @@ export function ChatColumn({
   draft: string
   onDraftChange: (text: string) => void
   onSend?: (text: string) => Promise<boolean> | boolean
+  onAnswerWidget?: (toolCallId: string, answer: AskChoiceAnswer) => void
+  answeringWidgetId?: string | null
+  widgetError?: { toolCallId: string; message: string } | null
   onNewChat?: () => void
   creating?: boolean
   sending?: boolean
@@ -92,7 +99,12 @@ export function ChatColumn({
               {showSummary ? (
                 <MatterSummary matterId={matterId} status={threadStatus} observations={observations} />
               ) : null}
-              <MessageList messages={messages} />
+              <MessageList
+                messages={messages}
+                onAnswerWidget={onAnswerWidget}
+                answeringWidgetId={answeringWidgetId}
+                widgetError={widgetError}
+              />
             </>
           )}
         </div>

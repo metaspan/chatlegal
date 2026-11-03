@@ -3,6 +3,18 @@ import type { MastraDBMessage } from '@mastra/core/agent'
 import { isObservationalMemoryEnabled, type StorageThreadType } from '@mastra/core/memory'
 import { LibSQLStore } from '@mastra/libsql'
 import { Memory } from '@mastra/memory'
+import {
+  ASK_CHOICE_NAME,
+  ASK_CHOICE_VERSION,
+  acceptChoiceAnswer,
+  askChoiceToolArgs,
+  askChoiceToolResult,
+  messageHasAskChoice,
+  presentAskChoice,
+  readMatterAskChoice,
+  readStoredAskChoice,
+  type AskChoiceProps,
+} from './ask-choice'
 import { ensureMattersDatabaseDirectory, mattersDatabaseAuthToken, mattersDatabaseUrl } from './database-url'
 import { matterObservationSummary, matterObservationalMemoryConfig } from './observational-memory'
 import { matterMessageText, matterMessageTools, toIso } from './present'
@@ -165,18 +177,8 @@ export async function getMatterThread(
     orderBy: { field: 'createdAt', direction: 'ASC' },
   })
   const messages = recalled.messages
-    .filter((message) => message.role === 'user' || message.role === 'assistant')
-    .map((message) => {
-      const role = message.role as MatterMessage['role']
-      const tools = role === 'assistant' ? matterMessageTools(message.content) : []
-      return {
-        id: message.id,
-        role,
-        text: matterMessageText(message.content),
-        createdAt: toIso(message.createdAt),
-        ...(tools.length > 0 ? { tools } : {}),
-      }
-    })
+    .map((message) => toMatterMessage(message))
+    .filter((message): message is MatterMessage => message !== null)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id))
   return {
     matter: toSummary(thread),
@@ -244,4 +246,172 @@ export async function appendMatterMessage(
     text: input.text,
     createdAt: createdAt.toISOString(),
   }
+}
+
+const askChoiceLocks = new Map<string, Promise<void>>()
+
+/**
+ * One answer at a time for a card. A second pick waits, then sees the first
+ * result and is refused. This is the in-process form of the submit gate in
+ * hitly-net/hitly@94b2e92 apps/app/components/answer-form.tsx.
+ */
+function withAskChoiceLock<T>(key: string, run: () => Promise<T>): Promise<T> {
+  const previous = askChoiceLocks.get(key) ?? Promise.resolve()
+  let release: () => void = () => {}
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const tail = previous.then(() => gate)
+  askChoiceLocks.set(key, tail)
+  return previous.then(run, run).finally(() => {
+    release()
+    if (askChoiceLocks.get(key) === tail) askChoiceLocks.delete(key)
+  })
+}
+
+function toMatterMessage(message: {
+  id: string
+  role: string
+  content: MastraDBMessage['content']
+  createdAt: Date | string
+}): MatterMessage | null {
+  if (message.role !== 'user' && message.role !== 'assistant') return null
+  const role = message.role
+  const widget = role === 'assistant' ? readMatterAskChoice(message.content) : null
+  const tools = role === 'assistant'
+    ? matterMessageTools(message.content).filter((tool) => !widget || tool.name !== ASK_CHOICE_NAME)
+    : []
+  return {
+    id: message.id,
+    role,
+    text: matterMessageText(message.content),
+    createdAt: toIso(message.createdAt),
+    ...(tools.length > 0 ? { tools } : {}),
+    ...(widget ? { widget } : {}),
+  }
+}
+
+/**
+ * Stores an askChoice card on a matter the user owns.
+ * There is no model call. TODO(G-01 Concierge): call this when the model asks.
+ */
+export async function appendAskChoice(
+  store: MatterStore,
+  userId: string,
+  matterId: string,
+  props: AskChoiceProps,
+): Promise<MatterMessage | null> {
+  const thread = await ownedThread(store, userId, matterId)
+  if (!thread) return null
+  const resourceId = matterResourceId(userId)
+  const createdAt = new Date()
+  const toolCallId = randomUUID()
+  const message: MastraDBMessage = {
+    id: randomUUID(),
+    role: 'assistant',
+    createdAt,
+    threadId: matterId,
+    resourceId,
+    content: {
+      format: 2,
+      parts: [
+        {
+          type: 'tool-invocation',
+          toolInvocation: {
+            state: 'call',
+            toolCallId,
+            toolName: ASK_CHOICE_NAME,
+            args: askChoiceToolArgs(props, ASK_CHOICE_VERSION),
+          },
+        },
+      ],
+    },
+  }
+  await store.memory.saveMessages({ messages: [message] })
+  await store.memory.updateThread({
+    id: matterId,
+    title: thread.title,
+    metadata: { ...(thread.metadata ?? {}), kind: MATTER_KIND },
+  })
+  return toMatterMessage(message)
+}
+
+export type AnswerAskChoiceResult =
+  | { ok: true; message: MatterMessage }
+  | { ok: false; reason: 'missing' }
+  | { ok: false; reason: 'invalid'; issues: string[] }
+  | { ok: false; reason: 'answered'; message: MatterMessage }
+
+/**
+ * Records one pick on an askChoice card. A card that already has a result is
+ * left as it was. The pick has to be one of the options stored with the card.
+ */
+export async function answerAskChoice(
+  store: MatterStore,
+  userId: string,
+  matterId: string,
+  toolCallId: string,
+  answer: unknown,
+): Promise<AnswerAskChoiceResult> {
+  const id = toolCallId.trim()
+  if (!id) return { ok: false, reason: 'missing' }
+  return withAskChoiceLock(`${matterId}:${id}`, async () => {
+    const thread = await ownedThread(store, userId, matterId)
+    if (!thread) return { ok: false, reason: 'missing' }
+    const resourceId = matterResourceId(userId)
+    const recalled = await store.memory.recall({
+      threadId: matterId,
+      resourceId,
+      perPage: false,
+      orderBy: { field: 'createdAt', direction: 'ASC' },
+    })
+    const message = recalled.messages.find(
+      (item) => item.role === 'assistant' && messageHasAskChoice(item.content, id),
+    )
+    if (!message) return { ok: false, reason: 'missing' }
+    const shown = toMatterMessage(message)
+    if (!shown) return { ok: false, reason: 'missing' }
+    const call = readStoredAskChoice(message.content)
+    if (call?.toolCallId === id && call.state === 'result') {
+      return { ok: false, reason: 'answered', message: shown }
+    }
+    if (!call || call.toolCallId !== id) return { ok: false, reason: 'invalid', issues: ['(props): invalid'] }
+    const accepted = acceptChoiceAnswer(call.props, answer)
+    if (!accepted.ok) return { ok: false, reason: 'invalid', issues: accepted.issues }
+    const answeredAt = Date.now()
+    const parts = message.content.parts.map((part) => {
+      if (part.type !== 'tool-invocation') return part
+      if (part.toolInvocation.toolCallId !== id || part.toolInvocation.toolName !== ASK_CHOICE_NAME) return part
+      return {
+        ...part,
+        updatedAt: answeredAt,
+        toolInvocation: {
+          state: 'result' as const,
+          toolCallId: id,
+          toolName: ASK_CHOICE_NAME,
+          args: part.toolInvocation.args,
+          result: askChoiceToolResult(call.version, accepted.answer),
+        },
+      }
+    })
+    await store.memory.updateMessages({
+      messages: [{ id: message.id, content: { ...message.content, parts } }],
+    })
+    const widget = presentAskChoice({
+      toolCallId: id,
+      version: call.version,
+      props: call.props,
+      status: 'answered',
+      answer: accepted.answer,
+      answeredAt: new Date(answeredAt).toISOString(),
+    })
+    return {
+      ok: true,
+      message: {
+        ...shown,
+        tools: shown.tools?.filter((tool) => tool.name !== ASK_CHOICE_NAME),
+        widget,
+      },
+    }
+  })
 }

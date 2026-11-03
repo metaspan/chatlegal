@@ -217,6 +217,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           }}
           sending={mattersSession.sending}
           sendError={mattersSession.sendError}
+          answeringWidgetId={mattersSession.answeringWidgetId}
+          widgetError={mattersSession.widgetError}
+          onAnswerWidget={(toolCallId, answer) => {
+            void mattersSession.answerWidget(toolCallId, answer)
+          }}
           onNewChat={() => {
             setQuery('')
             void mattersSession.createMatterSession()

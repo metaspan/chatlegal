@@ -11,11 +11,47 @@ export type MatterSummary = {
 }
 
 /**
- * A tool the assistant used on this message.
+ * A tool the assistant used on this message, other than an askChoice card.
  * The name is enough for the centre pane. Arguments and results stay on the server.
  */
 export type MatterToolUse = {
   name: string
+}
+
+/**
+ * One option on an askChoice card.
+ * Ids are the values stored with the answer. Labels are what the person sees.
+ */
+export type AskChoiceOption = {
+  id: string
+  label: string
+  description?: string
+}
+
+/** Single-select stores `{ choice }`. Multi-select stores `{ choices }`. */
+export type AskChoiceAnswer = { choice: string } | { choices: string[] }
+
+/**
+ * An askChoice card on an assistant message.
+ * Shape adapted from dcolley/tourbillon@7a8595b
+ * apps/web/components/assistant/widgets/chat-card-specs.ts (askChoice v2).
+ * `allowCustom` is not part of that card, so there is no free-text option here.
+ */
+export type MatterAskChoice = {
+  toolCallId: string
+  name: 'askChoice'
+  version: 1 | 2
+  question: string
+  detail?: string
+  options: AskChoiceOption[]
+  multiSelect: boolean
+  minSelected: number
+  maxSelected: number
+  recommended?: string[]
+  defaultOption?: string
+  status: 'pending' | 'answered'
+  answer?: AskChoiceAnswer
+  answeredAt?: string
 }
 
 export type MatterMessage = {
@@ -24,6 +60,7 @@ export type MatterMessage = {
   text: string
   createdAt: string
   tools?: MatterToolUse[]
+  widget?: MatterAskChoice
   /** Set on a message that is on screen before the server has stored it. */
   pending?: boolean
 }
