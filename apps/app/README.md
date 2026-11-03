@@ -69,11 +69,16 @@ Create the Clerk application with **Organizations turned off**. This repo does n
 
 ## Shell
 
+Signed-in pages use three panes. The left and right panes can be hidden. That choice is stored in `localStorage` (`chatlegal.shell.leftOpen`, `chatlegal.shell.rightOpen`). The right pane width still drags on a wide screen (`chatlegal.chat.sidebarWidth`).
+
 | Pane | Now |
 |---|---|
-| Left | Matters and Work links, personal account, sign-out, theme |
-| Middle | Case-work placeholder, plus a session proof on `/` |
-| Right | Chat placeholder. Width drags on desktop and is stored in `localStorage` (`chatlegal.chat.sidebarWidth`) |
+| App bar | ChatLegal, show or hide each side pane, colour theme, Clerk account, sign out |
+| Left | Search, New chat, Library, and chat/matter history placeholders |
+| Centre | Chat thread and a text box. Sending is not connected. `/` also shows the signed-in session |
+| Right | Viewer placeholders for Markdown, an image, a PDF, and chat state |
+
+The product disclaimer stays under the panes. `/matters` and `/work` still exist; their short notes render above the thread.
 
 ## Deferred
 

@@ -1,7 +1,7 @@
 /**
- * Docked chat pane width, persisted in localStorage.
+ * Right-hand viewer width, persisted in localStorage.
  * Adapted from dcolley/tourbillon@7a8595b apps/web/lib/chat-layout-storage.ts.
- * Fab / popover layout modes stay deferred until the AG-UI chat slice.
+ * The storage key is unchanged. Fab / popover layout modes stay deferred.
  */
 
 export const CHAT_SIDEBAR_WIDTH_STORAGE_KEY = 'chatlegal.chat.sidebarWidth'
