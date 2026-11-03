@@ -187,6 +187,8 @@ describe('dashboard shell', () => {
     assert.match(bar, /Personal account/)
     assert.match(bar, /SignOutControl/)
     assert.match(bar, /UserButton/)
+    assert.match(bar, /data-chrome="burgundy"/)
+    assert.match(bar, /bg-chrome/)
     assert.doesNotMatch(combined, /CompanySwitcher|OrganizationSwitcher/)
     const libraryHook = fs.readFileSync(path.join(here, 'shell/use-library.ts'), 'utf8')
     assert.match(libraryHook, /\/api\/library/)

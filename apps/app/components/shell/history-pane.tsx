@@ -4,6 +4,8 @@ import { useState, type FormEvent } from 'react'
 import { Library, PanelLeftClose, Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
 import { filterMatterHistory, type MatterHistoryRow } from '@/lib/matters/filter'
 import type { WorkspaceFile } from '@/lib/workspace/types'
 import { cn } from '@/lib/utils'
@@ -78,9 +80,9 @@ export function HistoryPane({
         </Button>
       </div>
       <form role="search" className="px-3 pt-2" onSubmit={(event) => event.preventDefault()}>
-        <label htmlFor="chat-search" className="text-xs font-medium text-muted-foreground">
+        <Label htmlFor="chat-search" className="text-xs font-medium text-muted-foreground">
           Search
-        </label>
+        </Label>
         <div className="relative mt-1">
           <Search className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -193,13 +195,13 @@ function LibrarySection({
         </h2>
       </div>
       <form className="mt-2 flex flex-col gap-1" onSubmit={onSubmit}>
-        <label htmlFor="library-file-name" className="text-xs font-medium text-muted-foreground">
+        <Label htmlFor="library-file-name" className="text-xs font-medium text-muted-foreground">
           File name
-        </label>
+        </Label>
         <Input id="library-file-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="letter.txt" />
-        <label htmlFor="library-file-text" className="text-xs font-medium text-muted-foreground">
+        <Label htmlFor="library-file-text" className="text-xs font-medium text-muted-foreground">
           File text
-        </label>
+        </Label>
         <Input id="library-file-text" value={text} onChange={(event) => setText(event.target.value)} placeholder="A short note" />
         <Button type="submit" variant="secondary" size="sm" className="mt-1" disabled={adding || name.trim().length === 0}>
           Add a file
@@ -229,7 +231,8 @@ function LibrarySection({
           ))}
         </ul>
       )}
-      <div className="mt-3 border-t pt-2" data-matter-files={matterId ?? ''}>
+      <div className="mt-3" data-matter-files={matterId ?? ''}>
+        <Separator className="mb-2" />
         <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">This matter</h3>
         {!matterId ? (
           <p className="mt-1 text-xs text-muted-foreground">Open a matter to see its files.</p>
@@ -308,7 +311,7 @@ function HistoryRow({
         onClick={() => onSelect(item.id)}
         className={cn(
           'w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-sidebar-accent',
-          active && 'bg-sidebar-accent',
+          active && 'bg-sidebar-accent shadow-[inset_3px_0_0_var(--chrome)]',
         )}
       >
         <span className="block truncate font-medium">{item.title}</span>

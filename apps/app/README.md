@@ -80,9 +80,11 @@ Create the Clerk application with **Organizations turned off**. This repo does n
 
 Signed-in pages use three panes. The left and right panes can be hidden. That choice is stored in `localStorage` (`chatlegal.shell.leftOpen`, `chatlegal.shell.rightOpen`). The right pane width still drags on a wide screen (`chatlegal.chat.sidebarWidth`).
 
+Colour is the docs-site M1 palette, in `app/globals.css`. Shadcn names point at those tokens. Cream is the page, raised cream is the side panes and cards, ink and muted ink are the type, teal is for links, and burgundy is the top bar. Headings use Newsreader. Body text uses Atkinson Hyperlegible. Dark mode uses the site's dark surfaces and the darker burgundy.
+
 | Pane | Now |
 |---|---|
-| App bar | ChatLegal, show or hide each side pane, colour theme, Clerk account, sign out |
+| App bar | Burgundy chrome, ChatLegal, show or hide each side pane, colour theme, Clerk account, sign out |
 | Left | Search, New chat, the user's library, the open matter's files, and the signed-in user's matters. The library is empty until a file is added. Matters are empty until the first new chat |
 | Centre | The open matter's thread, its summary, and a text box. The draft is kept with that matter. Sending stays off. `/` also shows the signed-in session |
 | Right | Viewer placeholders for Markdown, an image, and a PDF. Chat state shows the open matter's summary |

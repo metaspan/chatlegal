@@ -6,6 +6,14 @@
 
 @custom-variant dark (&:is([data-theme="dark"] *));
 
+/*
+ * M1 palette from apps/site (cream, ink, teal link, burgundy chrome).
+ * Shadcn names alias these. Do not add another palette.
+ * Token shape follows dcolley/tourbillon@7a8595b apps/web/app/globals.css
+ * (Tailwind v4 @theme, semantic colours). Tourbillon's neutral oklch values
+ * are not used.
+ */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -38,6 +46,16 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-raised: var(--bg-raised);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-link: var(--link);
+  --color-chrome: var(--chrome);
+  --color-chrome-ink: var(--chrome-ink);
+  --color-chrome-dark: var(--chrome-dark);
+  --color-line: var(--line);
+  --color-callout: var(--callout);
+  --color-pill: var(--pill);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -51,84 +69,102 @@
 
 :root {
   --radius: 0.625rem;
-  --background: #f3ecdf;
-  --foreground: #221c16;
-  --card: #faf6ef;
-  --card-foreground: #221c16;
-  --popover: #faf6ef;
-  --popover-foreground: #221c16;
-  --primary: #6e2430;
-  --primary-foreground: #fff7f4;
-  --secondary: #efe4d4;
-  --secondary-foreground: #221c16;
-  --muted: #efe4d4;
-  --muted-foreground: #5e564c;
-  --accent: #f8e7df;
-  --accent-foreground: #221c16;
-  --destructive: #8a3140;
-  --border: #ddd2c2;
-  --input: #ddd2c2;
-  --ring: #1c4f4a;
-  --chart-1: #6e2430;
-  --chart-2: #1c4f4a;
-  --chart-3: #5e564c;
-  --chart-4: #8a3140;
-  --chart-5: #9ed9d1;
-  --sidebar: #faf6ef;
-  --sidebar-foreground: #221c16;
-  --sidebar-primary: #6e2430;
-  --sidebar-primary-foreground: #fff7f4;
-  --sidebar-accent: #efe4d4;
-  --sidebar-accent-foreground: #221c16;
-  --sidebar-border: #ddd2c2;
-  --sidebar-ring: #1c4f4a;
   color-scheme: light;
+
+  /* Locked light palette. Names match the site where they do not clash with shadcn. */
+  --bg: #f3ecdf;
+  --bg-raised: #faf6ef;
+  --selection-ink: #221c16;
+  --ink: var(--selection-ink);
+  --ink-muted: #5e564c;
+  --link: #1c4f4a;
+  --link-bright: #9ed9d1;
+  --chrome: #6e2430;
+  --chrome-dark: #8a3140;
+  --chrome-ink: #fff7f4;
+  --line: #ddd2c2;
+  --pill: #efe4d4;
+  --callout: #f8e7df;
+  --selection: #e7c3c6;
+
+  /* Shadcn semantic aliases. */
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--bg-raised);
+  --card-foreground: var(--ink);
+  --popover: var(--bg-raised);
+  --popover-foreground: var(--ink);
+  --primary: var(--chrome);
+  --primary-foreground: var(--chrome-ink);
+  --secondary: var(--pill);
+  --secondary-foreground: var(--ink);
+  --muted: var(--pill);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--callout);
+  --accent-foreground: var(--ink);
+  --destructive: var(--chrome-dark);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--link);
+  --chart-1: var(--chrome);
+  --chart-2: var(--link);
+  --chart-3: var(--ink-muted);
+  --chart-4: var(--chrome-dark);
+  --chart-5: var(--link-bright);
+  --sidebar: var(--bg-raised);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--chrome);
+  --sidebar-primary-foreground: var(--chrome-ink);
+  --sidebar-accent: var(--pill);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--link);
 }
 
+/* Dark surfaces are the site M1 dark theme. Chrome uses the locked darker burgundy. */
 [data-theme="dark"] {
-  --background: #141210;
-  --foreground: #f4eee6;
-  --card: #1e1a17;
-  --card-foreground: #f4eee6;
-  --popover: #1e1a17;
-  --popover-foreground: #f4eee6;
-  --primary: #8a3140;
-  --primary-foreground: #fff7f4;
-  --secondary: #2a2622;
-  --secondary-foreground: #f4eee6;
-  --muted: #2a2622;
-  --muted-foreground: #c3b8aa;
-  --accent: #2c221c;
-  --accent-foreground: #f4eee6;
-  --destructive: #e7c3c6;
-  --border: #3a332c;
-  --input: #3a332c;
-  --ring: #9ed9d1;
-  --chart-1: #8a3140;
-  --chart-2: #9ed9d1;
-  --chart-3: #c3b8aa;
-  --chart-4: #e7c3c6;
-  --chart-5: #f4eee6;
-  --sidebar: #1e1a17;
-  --sidebar-foreground: #f4eee6;
-  --sidebar-primary: #8a3140;
-  --sidebar-primary-foreground: #fff7f4;
-  --sidebar-accent: #2a2622;
-  --sidebar-accent-foreground: #f4eee6;
-  --sidebar-border: #3a332c;
-  --sidebar-ring: #9ed9d1;
+  --bg: #141210;
+  --bg-raised: #1e1a17;
+  --ink: #f4eee6;
+  --ink-muted: #c3b8aa;
+  --line: #3a332c;
+  --link: var(--link-bright);
+  --chrome: var(--chrome-dark);
+  --pill: #2a2622;
+  --callout: #2c221c;
+  --destructive: var(--selection);
   color-scheme: dark;
 }
 
 @layer base {
+  html {
+    background: var(--bg);
+    color: var(--ink);
+  }
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground font-sans;
   }
+  h1 {
+    font-family: var(--font-serif), Georgia, serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  a {
+    color: var(--link);
+    text-underline-offset: 0.16em;
+  }
+  a:hover {
+    text-decoration-thickness: 2px;
+  }
+  [data-chrome="burgundy"] a {
+    color: inherit;
+    text-decoration: none;
+  }
   ::selection {
-    background: #e7c3c6;
-    color: #221c16;
+    background: var(--selection);
+    color: var(--selection-ink);
   }
 }
