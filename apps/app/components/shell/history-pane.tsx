@@ -1,9 +1,11 @@
 'use client'
 
+import { useState, type FormEvent } from 'react'
 import { Library, PanelLeftClose, Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { filterMatterHistory, type MatterHistoryRow } from '@/lib/matters/filter'
+import type { WorkspaceFile } from '@/lib/workspace/types'
 import { cn } from '@/lib/utils'
 
 /**
@@ -11,6 +13,8 @@ import { cn } from '@/lib/utils'
  * List chrome adapted from dcolley/tourbillon@7a8595b
  * apps/web/components/assistant/sidebar.tsx.
  * Each row is one matter, which is one chat thread.
+ * Library stays in this pane: the user's files, then the open matter's files.
+ * File rows use that same list chrome: a name and an action.
  */
 export function HistoryPane({
   query,
@@ -23,8 +27,17 @@ export function HistoryPane({
   onNewChat,
   creating,
   onCollapse,
-  libraryNote,
+  libraryFiles,
+  libraryLoaded,
+  libraryError,
+  addingFile,
   onAddFile,
+  matterFiles,
+  matterFilesLoaded,
+  matterFilesError,
+  movingName,
+  onMoveToMatter,
+  onMoveToLibrary,
 }: {
   query: string
   onQueryChange: (query: string) => void
@@ -36,8 +49,17 @@ export function HistoryPane({
   onNewChat: () => void
   creating: boolean
   onCollapse: () => void
-  libraryNote: string | null
-  onAddFile: () => void
+  libraryFiles: readonly WorkspaceFile[]
+  libraryLoaded: boolean
+  libraryError: string | null
+  addingFile: boolean
+  onAddFile: (input: { name: string; text: string }) => Promise<boolean> | boolean
+  matterFiles: readonly WorkspaceFile[]
+  matterFilesLoaded: boolean
+  matterFilesError: string | null
+  movingName: string | null
+  onMoveToMatter: (name: string) => void
+  onMoveToLibrary: (name: string) => void
 }) {
   const visible = filterMatterHistory(matters, query)
   const searching = query.trim().length > 0
@@ -83,23 +105,20 @@ export function HistoryPane({
           New chat
         </Button>
       </div>
-      <section aria-labelledby="library-heading" className="mx-3 mb-3 rounded-lg border bg-card px-3 py-2">
-        <div className="flex items-center gap-2">
-          <Library className="size-4 text-muted-foreground" />
-          <h2 id="library-heading" className="text-sm font-semibold">
-            Library
-          </h2>
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">No files yet.</p>
-        <Button type="button" variant="secondary" size="sm" className="mt-2" onClick={onAddFile}>
-          Add a file
-        </Button>
-        {libraryNote ? (
-          <p role="status" className="mt-2 text-xs text-muted-foreground">
-            {libraryNote}
-          </p>
-        ) : null}
-      </section>
+      <LibrarySection
+        files={libraryFiles}
+        loaded={libraryLoaded}
+        error={libraryError}
+        adding={addingFile}
+        onAddFile={onAddFile}
+        matterId={activeId}
+        matterFiles={matterFiles}
+        matterFilesLoaded={matterFilesLoaded}
+        matterFilesError={matterFilesError}
+        movingName={movingName}
+        onMoveToMatter={onMoveToMatter}
+        onMoveToLibrary={onMoveToLibrary}
+      />
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
         <h2 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">History</h2>
         <p className="px-1 pt-1 text-xs text-muted-foreground">One matter is one chat.</p>
@@ -123,6 +142,151 @@ export function HistoryPane({
         ) : null}
       </div>
     </aside>
+  )
+}
+
+function LibrarySection({
+  files,
+  loaded,
+  error,
+  adding,
+  onAddFile,
+  matterId,
+  matterFiles,
+  matterFilesLoaded,
+  matterFilesError,
+  movingName,
+  onMoveToMatter,
+  onMoveToLibrary,
+}: {
+  files: readonly WorkspaceFile[]
+  loaded: boolean
+  error: string | null
+  adding: boolean
+  onAddFile: (input: { name: string; text: string }) => Promise<boolean> | boolean
+  matterId: string | null
+  matterFiles: readonly WorkspaceFile[]
+  matterFilesLoaded: boolean
+  matterFilesError: string | null
+  movingName: string | null
+  onMoveToMatter: (name: string) => void
+  onMoveToLibrary: (name: string) => void
+}) {
+  const [name, setName] = useState('')
+  const [text, setText] = useState('')
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const added = await onAddFile({ name, text })
+    if (added) {
+      setName('')
+      setText('')
+    }
+  }
+
+  return (
+    <section aria-labelledby="library-heading" className="mx-3 mb-3 max-h-80 overflow-y-auto rounded-lg border bg-card px-3 py-2">
+      <div className="flex items-center gap-2">
+        <Library className="size-4 text-muted-foreground" />
+        <h2 id="library-heading" className="text-sm font-semibold">
+          Library
+        </h2>
+      </div>
+      <form className="mt-2 flex flex-col gap-1" onSubmit={onSubmit}>
+        <label htmlFor="library-file-name" className="text-xs font-medium text-muted-foreground">
+          File name
+        </label>
+        <Input id="library-file-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="letter.txt" />
+        <label htmlFor="library-file-text" className="text-xs font-medium text-muted-foreground">
+          File text
+        </label>
+        <Input id="library-file-text" value={text} onChange={(event) => setText(event.target.value)} placeholder="A short note" />
+        <Button type="submit" variant="secondary" size="sm" className="mt-1" disabled={adding || name.trim().length === 0}>
+          Add a file
+        </Button>
+      </form>
+      {error ? (
+        <p role="alert" className="mt-2 text-xs text-muted-foreground">
+          {error}
+        </p>
+      ) : null}
+      {!loaded ? (
+        <p className="mt-2 text-xs text-muted-foreground">Loading library…</p>
+      ) : files.length === 0 ? (
+        <p className="mt-2 text-xs text-muted-foreground">No files yet.</p>
+      ) : (
+        <ul className="mt-2 flex flex-col gap-1" aria-label="Library files" data-library-scope="user">
+          {files.map((file) => (
+            <FileRow
+              key={file.name}
+              file={file}
+              scope="user"
+              actionLabel={`Move ${file.name} to this matter`}
+              actionText="Move to this matter"
+              disabled={!matterId || movingName === file.name}
+              onAction={() => onMoveToMatter(file.name)}
+            />
+          ))}
+        </ul>
+      )}
+      <div className="mt-3 border-t pt-2" data-matter-files={matterId ?? ''}>
+        <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">This matter</h3>
+        {!matterId ? (
+          <p className="mt-1 text-xs text-muted-foreground">Open a matter to see its files.</p>
+        ) : matterFilesError ? (
+          <p role="alert" className="mt-1 text-xs text-muted-foreground">
+            {matterFilesError}
+          </p>
+        ) : !matterFilesLoaded ? (
+          <p className="mt-1 text-xs text-muted-foreground">Loading files…</p>
+        ) : matterFiles.length === 0 ? (
+          <p className="mt-1 text-xs text-muted-foreground">No files in this matter yet.</p>
+        ) : (
+          <ul className="mt-1 flex flex-col gap-1" aria-label="Matter files" data-library-scope="matter">
+            {matterFiles.map((file) => (
+              <FileRow
+                key={file.name}
+                file={file}
+                scope="matter"
+                actionLabel={`Move ${file.name} to your library`}
+                actionText="Move to library"
+                disabled={movingName === file.name}
+                onAction={() => onMoveToLibrary(file.name)}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function FileRow({
+  file,
+  scope,
+  actionLabel,
+  actionText,
+  disabled,
+  onAction,
+}: {
+  file: WorkspaceFile
+  scope: 'user' | 'matter'
+  actionLabel: string
+  actionText: string
+  disabled: boolean
+  onAction: () => void
+}) {
+  return (
+    <li
+      data-library-file={scope === 'user' ? file.name : undefined}
+      data-matter-file={scope === 'matter' ? file.name : undefined}
+      className="flex items-center gap-1 rounded-lg px-1 py-1 hover:bg-sidebar-accent"
+    >
+      <span className="min-w-0 flex-1 truncate text-sm">{file.name}</span>
+      <Button type="button" variant="ghost" size="xs" aria-label={actionLabel} disabled={disabled} onClick={onAction}>
+        {actionText}
+      </Button>
+    </li>
   )
 }
 

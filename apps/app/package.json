@@ -13,7 +13,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "NODE_ENV=test tsx --test lib/clerk-host.test.ts lib/route-policy.test.ts lib/proxy-response.test.ts lib/proxy-reverse.test.ts lib/session-guards.test.ts lib/session-guards.live.test.ts lib/chat-layout-storage.test.ts lib/shell-layout.test.ts lib/viewer-kind.test.ts lib/consumer-only.test.ts lib/matters/matters.test.ts lib/matters/observational-memory.test.ts lib/matters/store.test.ts lib/matters/matter-route.test.ts components/dashboard-shell.test.tsx"
+    "test": "NODE_ENV=test tsx --test lib/clerk-host.test.ts lib/route-policy.test.ts lib/proxy-response.test.ts lib/proxy-reverse.test.ts lib/session-guards.test.ts lib/session-guards.live.test.ts lib/chat-layout-storage.test.ts lib/shell-layout.test.ts lib/viewer-kind.test.ts lib/consumer-only.test.ts lib/matters/matters.test.ts lib/matters/observational-memory.test.ts lib/matters/store.test.ts lib/matters/matter-route.test.ts lib/workspace/workspace.test.ts lib/workspace/workspace-route.test.ts components/dashboard-shell.test.tsx"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
