@@ -55,6 +55,19 @@ describe('signed-in pages guard the session', () => {
     })
   }
 
+  it('matter routes check the session before listing or opening a matter', () => {
+    const files = walk(path.join(appDir, 'app/api/matters')).filter((file) => file.endsWith('route.ts'))
+    assert.deepEqual(
+      files.map((file) => path.relative(appDir, file)).sort(),
+      ['app/api/matters/[matterId]/route.ts', 'app/api/matters/route.ts'],
+    )
+    for (const file of files) {
+      const source = fs.readFileSync(file, 'utf8')
+      assert.match(source, /requireConsumerSession/)
+      assert.doesNotMatch(source, /searchParams|userId=/)
+    }
+  })
+
   it('sign-in and sign-up pages do not require a session', () => {
     for (const rel of ['app/sign-in/[[...sign-in]]/page.tsx', 'app/sign-up/[[...sign-up]]/page.tsx']) {
       const source = fs.readFileSync(path.join(appDir, rel), 'utf8')

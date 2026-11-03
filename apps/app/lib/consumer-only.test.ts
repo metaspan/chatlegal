@@ -34,6 +34,10 @@ describe('Consumer-only app surface', () => {
       assert.doesNotMatch(source, /I act for you/i, rel)
       assert.doesNotMatch(source, /hitly-cloud|@hitly\b|stripe/i, rel)
       assert.doesNotMatch(source, /tourbillon\.chat|@tourbillon/, rel)
+      if (rel.startsWith('components/') || (rel.startsWith('app/') && !rel.startsWith('app/api/'))) {
+        assert.doesNotMatch(source, /@mastra\//, rel)
+        assert.doesNotMatch(source, /matters\/store/, rel)
+      }
     }
   })
 })

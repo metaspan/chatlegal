@@ -9,7 +9,7 @@ export default async function MattersPage() {
   return (
     <section className="flex max-w-prose flex-col gap-2">
       <h1 className="font-serif text-2xl font-semibold tracking-tight">Matters</h1>
-      <p className="text-muted-foreground">Matters will be listed here. None are open yet.</p>
+      <p className="text-muted-foreground">Each matter is one chat. Open it from the list on the left, or start a new chat.</p>
     </section>
   )
 }

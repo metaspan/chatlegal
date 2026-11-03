@@ -4,7 +4,7 @@ Signed-in ChatLegal app for **personal Consumer accounts**, served only at **htt
 
 `https://chatlegal.uk` is [`apps/site`](../site): docs and the waitlist. Clerk is not on that site. Do not add Clerk keys, scripts, or middleware there.
 
-This slice is Clerk sign-in plus the three-pane shell. Matters, case work, and chat are placeholders. There is no model, no retrieval, and no letter drafting.
+This slice is Clerk sign-in, the three-pane shell, and matter history. One matter is one Mastra chat thread, stored for the signed-in Clerk user. Sending stays off until a model is connected. There is no retrieval and no letter drafting.
 
 A 502 on https://app.chatlegal.uk means the app process is not running there yet. This repository change does not deploy it.
 
@@ -39,6 +39,8 @@ See [`.env.example`](.env.example).
 | `NEXT_PUBLIC_CLERK_FAPI` | Optional Frontend API origin. Unset uses Clerk's hosted Frontend API |
 | `NEXT_PUBLIC_CLERK_PROXY_URL` | Optional. Only `https://app.chatlegal.uk/__clerk` |
 | `NEXT_PUBLIC_CLERK_API_URL` | Optional Backend API origin. Default `https://api.clerk.com` |
+| `CHATLEGAL_MATTERS_DB` | Optional. Default is a local libSQL file, `data/matters.db`, in the app working directory. On the host set `file:/var/lib/chatlegal/matters.db` so a new release does not wipe matters. A `libsql://` URL is the remote move |
+| `CHATLEGAL_MATTERS_AUTH_TOKEN` | Optional. Only for a remote libSQL URL. Leave unset for the local file |
 
 The provider also sets `allowedRedirectOrigins` to `https://app.chatlegal.uk`. In the Clerk Dashboard, allowed origins and redirect URLs are that origin only. Do not add `https://chatlegal.uk`.
 
@@ -64,8 +66,10 @@ Create the Clerk application with **Organizations turned off**. This repo does n
 - `ClerkProvider` in the root layout.
 - `proxy.ts` (`clerkMiddleware`) sends unsigned visitors to `/sign-in`. `/sign-in` and `/sign-up` are public.
 - Signed-in routes under `app/(app)` call `requireConsumerSession()` and render inside the shell.
+- `GET /api/matters` and `POST /api/matters` use that same Clerk user id. A matter id from someone else is not returned.
 - Sign-out returns to `https://app.chatlegal.uk/sign-in`.
 - The home page shows the Clerk user id and session id when a session exists.
+- New chat creates a matter thread in Mastra memory (`@mastra/core` 1.78.0, `@mastra/memory` 1.36.0, `@mastra/libsql` 1.26.2). The left pane lists those threads. Opening a row loads that thread into the centre. The composer draft stays in client state under the open matter id. Send stays disabled.
 
 ## Shell
 
@@ -74,16 +78,19 @@ Signed-in pages use three panes. The left and right panes can be hidden. That ch
 | Pane | Now |
 |---|---|
 | App bar | ChatLegal, show or hide each side pane, colour theme, Clerk account, sign out |
-| Left | Search, New chat, Library, and chat/matter history placeholders |
-| Centre | Chat thread and a text box. Sending is not connected. `/` also shows the signed-in session |
+| Left | Search, New chat, Library, and the signed-in user's matters. Empty until the first new chat |
+| Centre | The open matter's thread and a text box. The draft is kept with that matter. Sending stays off. `/` also shows the signed-in session |
 | Right | Viewer placeholders for Markdown, an image, a PDF, and chat state |
 
 The product disclaimer stays under the panes. `/matters` and `/work` still exist; their short notes render above the thread.
 
+Matters are stored with `@mastra/libsql` in a local SQLite file. No database secret is required. Set `CHATLEGAL_MATTERS_DB` to a durable path on the host. To move off the file later, point that variable at a `libsql://` URL and set `CHATLEGAL_MATTERS_AUTH_TOKEN`, or replace `LibSQLStore` with `@mastra/pg`. Threads stay keyed by `clerk:<userId>` with metadata `kind: matter`.
+
 ## Deferred
 
 - Clerk Organizations, seats, and workspace switching.
-- AG-UI chat, widgets, Mastra, TaskRunner, and HITL `ask_user`.
+- A model, so the composer can send. Observational memory and workspace files.
+- AG-UI chat, widgets, TaskRunner, and HITL `ask_user`.
 - `hitly-net/hitl-spec@3410eda` schemas are not vendored yet.
 
 Next slices should start from the pins in the pull request, not from a new layout.
