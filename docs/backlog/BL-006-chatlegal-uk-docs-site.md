@@ -34,3 +34,6 @@ Chat / RAG UI · solicitor service · CAB or advice-agency branding · BLOCKED s
 Locked 3 Nov 2026 (Derek): `site/` in this repo · custom Next.js MDX · separate host (VM `chatlegal`, 192.168.10.34) · ship `/docs` before chat · build-time read of sibling `docs/`.
 
 Still open: counsel "reviewed" badge depth. See plan §H.
+
+
+**Monorepo (3 Nov):** ship as `apps/site`; leave `apps/app` placeholder for later chat.

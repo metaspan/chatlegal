@@ -17,6 +17,18 @@
 
 ---
 
+
+## Monorepo apps (locked 3 Nov 2026)
+
+Two initial apps in this repo:
+
+| App | Path (preferred) | Host | Scope |
+|---|---|---|---|
+| **site** | `apps/site` | chatlegal.uk | Marketing + `/docs` (Hermes M1 / Ops M1) |
+| **app** | `apps/app` | app.chatlegal.uk | Chat product — scaffold placeholder only until chat is authorised |
+
+Content for docs still sourced from sibling `docs/` at the repo root. Earlier `site/` wording means the **site app**, not a rival to `apps/site`.
+
 ## A. Goals & non-goals
 
 **Goals**
