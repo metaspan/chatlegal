@@ -1,6 +1,12 @@
 import { describe, it, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { SHELL_LEFT_OPEN_KEY, SHELL_RIGHT_OPEN_KEY, readPaneOpen, writePaneOpen } from './shell-layout.ts'
+import {
+  SHELL_LEFT_OPEN_KEY,
+  SHELL_RIGHT_OPEN_KEY,
+  escapeRestoresLeftPane,
+  readPaneOpen,
+  writePaneOpen,
+} from './shell-layout.ts'
 
 const memory = new Map<string, string>()
 
@@ -34,5 +40,26 @@ describe('shell pane open state', () => {
     memory.set(SHELL_LEFT_OPEN_KEY, 'yes')
     assert.equal(readPaneOpen(SHELL_LEFT_OPEN_KEY), true)
     assert.equal(readPaneOpen(SHELL_LEFT_OPEN_KEY, false), false)
+  })
+
+  it('uses Escape to show chats only when both panes are hidden', () => {
+    const escape = { key: 'Escape' }
+    assert.equal(escapeRestoresLeftPane(escape, { leftOpen: false, rightOpen: false }), true)
+    assert.equal(escapeRestoresLeftPane(escape, { leftOpen: true, rightOpen: false }), false)
+    assert.equal(escapeRestoresLeftPane(escape, { leftOpen: false, rightOpen: true }), false)
+    assert.equal(escapeRestoresLeftPane(escape, { leftOpen: true, rightOpen: true }), false)
+    assert.equal(escapeRestoresLeftPane({ key: 'Enter' }, { leftOpen: false, rightOpen: false }), false)
+    assert.equal(
+      escapeRestoresLeftPane({ key: 'Escape', defaultPrevented: true }, { leftOpen: false, rightOpen: false }),
+      false,
+    )
+    assert.equal(
+      escapeRestoresLeftPane({ key: 'Escape', shiftKey: true }, { leftOpen: false, rightOpen: false }),
+      false,
+    )
+    assert.equal(
+      escapeRestoresLeftPane({ key: 'Escape', metaKey: true }, { leftOpen: false, rightOpen: false }),
+      false,
+    )
   })
 })

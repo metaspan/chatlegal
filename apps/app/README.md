@@ -78,7 +78,7 @@ Create the Clerk application with **Organizations turned off**. This repo does n
 
 ## Shell
 
-Signed-in pages use three panes. The left and right panes can be hidden. That choice is stored in `localStorage` (`chatlegal.shell.leftOpen`, `chatlegal.shell.rightOpen`). The right pane width still drags on a wide screen (`chatlegal.chat.sidebarWidth`).
+Signed-in pages use three panes. The left and right panes can be hidden from the top bar, from the pane header, or from the chevron on that pane's edge. A hidden pane leaves a slim rail with the same chevron, and the centre column takes the freed width. That choice is stored in `localStorage` (`chatlegal.shell.leftOpen`, `chatlegal.shell.rightOpen`). On a wide screen, Escape shows chats again when both panes are hidden. The right pane width still drags (`chatlegal.chat.sidebarWidth`).
 
 Colour is the docs-site M1 palette, in `app/globals.css`. Shadcn names point at those tokens. Cream is the page, raised cream is the side panes and cards, ink and muted ink are the type, teal is for links, and burgundy is the top bar. Headings use Newsreader. Body text uses Atkinson Hyperlegible. Dark mode uses the site's dark surfaces and the darker burgundy.
 
