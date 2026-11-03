@@ -5,6 +5,14 @@
 **Backlog:** [BL-006](backlog/BL-006-chatlegal-uk-docs-site.md)
 **Inputs:** [CASE_TAXONOMY.md](CASE_TAXONOMY.md) · [SOURCE_LICENCE_ALLOWLIST.md](SOURCE_LICENCE_ALLOWLIST.md) · [protocols/](protocols/) · [eval/gold/](eval/gold/) · [REFERRALS.md](REFERRALS.md) · [policies/](policies/) · [CURATED_LAWS.md](CURATED_LAWS.md)
 
+> **Decisions locked (Derek, 3 Nov 2026, Europe/London)**
+> - **Repo:** `site/` folder inside this repo (`metaspan/chatlegal`) — no separate `chatlegal-web` repo.
+> - **Framework:** custom Next.js (App Router) + MDX — not Fumadocs / Nextra.
+> - **Hosting:** separate host for `chatlegal.uk` — Ops Proxmox VM `chatlegal` (192.168.10.34).
+> - **Sequencing:** ship `/docs` before `app.chatlegal.uk` chat.
+> - **Content sync:** same repo — `site/` reads sibling `docs/` at build time.
+> - **Still open:** counsel "reviewed" badge depth.
+
 > **Not a solicitor. Not legal advice.** This banner (or equivalent) goes on every major docs page: overview, category hubs, leaf law pages, sources hub, referrals.
 
 ---
@@ -95,10 +103,7 @@ Footer on every leaf: OGL attribution (legislation.gov.uk wording for statute; G
 ## C. Content pipeline
 
 - **Source of truth:** markdown in this public GitHub repo — `docs/protocols/`, `CASE_TAXONOMY.md`, `CURATED_LAWS.md`, `SOURCE_LICENCE_ALLOWLIST.md`, `REFERRALS.md`, `eval/gold/`, `policies/`.
-- **Website repo:** Next.js MDX app that **imports or syncs** from this public docs repo. Options (open decision, see H):
-  1. Build-time fetch of raw markdown from GitHub (simplest; no submodule pain).
-  2. Git submodule / subtree of this repo as `content/`.
-  3. Monorepo: site lives in this repo under `site/`.
+- **Website repo (locked):** Next.js MDX app in `site/` in this repo; reads sibling `docs/` markdown at build time (no fetch, no submodule).
 - **Tables are generated, not retyped.** The `/docs/sources` pages and leaf "related legislation" tables are rendered by parsing `SOURCE_LICENCE_ALLOWLIST.md` and `CURATED_LAWS.md` at build time. Hand-written MDX holds only the prose (scope, will/won't).
 - **Link health:** CI job fetches every outbound URL (same rule as BL-005: dead links removed, not guessed); failures block the deploy, not the merge.
 - **Editorial roles:** Product owns IA and curated law lists · counsel review before any gold / `reviewed` claim · Hermes owns the site code · Ops owns DNS, hosting, deploy.
@@ -123,8 +128,8 @@ Footer on every leaf: OGL attribution (legislation.gov.uk wording for statute; G
 
 ## F. Tech stack
 
-- **Next.js (App Router) + MDX.** Docs chrome via **Fumadocs** (recommended) or a Nextra-like setup: sidebar, client-side search, heading anchors, prev/next, dark mode.
-- **Static export** (or SSR) on Ops' chosen host. **No database for v0** — git-backed MDX is the CMS.
+- **Next.js (App Router) + MDX.** Custom docs chrome (locked; no Fumadocs/Nextra): sidebar, client-side search, heading anchors, prev/next, dark mode.
+- **Static export** (or SSR) on a separate host — Ops Proxmox VM `chatlegal` (192.168.10.34). **No database for v0** — git-backed MDX is the CMS.
 - **Later, only if git MDX becomes painful:** Postgres for an editorial CMS, review workflow or link-health history.
 - **Hosts:** `chatlegal.uk` (marketing + `/docs`). `app.chatlegal.uk` **reserved** for the chat app (later milestone; not built here).
 - **`/llms.txt`** at site root (+ optional `/llms-full.txt`): title, one-line purpose, not-legal-advice line, links to every docs page and the GitHub source.
@@ -135,22 +140,22 @@ Footer on every leaf: OGL attribution (legislation.gov.uk wording for statute; G
 
 | Milestone | Owner | Outcome |
 |---|---|---|
-| Hermes M1 | Hermes | Scaffold Next.js + MDX docs app; sidebar IA per §B; placeholder pages with banner; CI with preview builds |
+| Hermes M1 | Hermes | Scaffold custom Next.js + MDX docs app in `site/`; sidebar IA per §B; placeholder pages with banner; CI with preview builds |
 | Product M1 | Product | CURATED_LAWS seed (this commit) + mapping of allowlist rows → `/docs/sources/*` pages |
-| Hermes M2 | Hermes | Content sync from this repo; table renderers for CURATED_LAWS + allowlist; leaf + hub templates; link checker; `llms.txt` |
-| Ops M1 | Ops | DNS for `chatlegal.uk`, deploy pipeline, TLS, preview environments; reserve `app.chatlegal.uk` |
+| Hermes M2 | Hermes | Build-time read of sibling `docs/`; table renderers for CURATED_LAWS + allowlist; leaf + hub templates; link checker; `llms.txt` |
+| Ops M1 | Ops | DNS for `chatlegal.uk` → VM `chatlegal` (192.168.10.34), deploy pipeline, TLS, preview environments; reserve `app.chatlegal.uk` |
 | Product M2 | Product | Fill five locked leaf pages from gold/protocols; planned stubs; referrals page |
 | Counsel | Qualified counsel | Spot-check law pages before any `reviewed` badge; clear the four open gold blockers |
 | Later | Hermes / Ops | `app.chatlegal.uk` chat (separate milestone) |
 
-## H. Open decisions (for Derek)
+## H. Decisions (locked 3 Nov 2026, Europe/London, by Derek)
 
-1. **Website repo:** new `chatlegal-web` repo in the same GitHub org (recommended: clean separation, content pulled from this repo) vs monorepo `site/` folder here.
-2. **Docs framework:** Fumadocs (recommended) vs Nextra vs custom MDX layout.
-3. **Hosting target:** same host/pattern as existing Ops deployments vs a separate host for ChatLegal.
-4. **Sequencing:** does `/docs` ship publicly before any chat exists? (Recommendation: yes — it is the credibility layer and costs no inference.)
-5. **Content sync method:** build-time fetch vs submodule vs monorepo (follows from 1).
-6. **"Reviewed" badge:** what level of counsel check is needed before a page can show it?
+1. **Website repo — LOCKED:** `site/` folder inside this repo (`metaspan/chatlegal`). No separate `chatlegal-web` repo.
+2. **Docs framework — LOCKED:** custom Next.js MDX layout (not Fumadocs, not Nextra).
+3. **Hosting target — LOCKED:** separate host for `chatlegal.uk` — Ops Proxmox VM `chatlegal` at 192.168.10.34.
+4. **Sequencing — LOCKED:** yes, `/docs` ships publicly before `app.chatlegal.uk` chat.
+5. **Content sync — LOCKED:** same repo; `site/` consumes sibling `docs/` at build time.
+6. **"Reviewed" badge — OPEN:** what level of qualified-counsel check is needed before a page can show it?
 
 ## I. Success criteria
 

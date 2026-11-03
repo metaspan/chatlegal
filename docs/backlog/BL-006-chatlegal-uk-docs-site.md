@@ -11,13 +11,13 @@ Public docs at `https://chatlegal.uk/docs`: sections per law category with sub-p
 
 ## Scope
 
-1. Next.js App Router + MDX docs app (Hermes), IA per plan §B.
-2. Build-time render of CURATED_LAWS and allowlist tables from this repo (no hand-copied licence table).
+1. Custom Next.js App Router + MDX docs app in `site/` of this repo (Hermes), IA per plan §B. No Fumadocs/Nextra.
+2. Build-time render of CURATED_LAWS and allowlist tables from sibling `docs/` (no hand-copied licence table).
 3. Leaf + hub templates; five `eval:locked` leaves filled; `planned` stubs.
 4. `/docs/sources` grouped by status; build blockers surfaced; attribution page.
 5. `/docs/referrals`, `/docs/policies` summaries, `/docs/for-agents` + `/llms.txt`.
 6. Outbound link check in CI.
-7. Ops: DNS, TLS, deploy pipeline, preview envs; reserve `app.chatlegal.uk`.
+7. Ops: separate host — Proxmox VM `chatlegal` (192.168.10.34); DNS, TLS, deploy pipeline, preview envs; reserve `app.chatlegal.uk`.
 
 ## Out of scope
 
@@ -31,4 +31,6 @@ Chat / RAG UI · solicitor service · CAB or advice-agency branding · BLOCKED s
 
 ## Open decisions
 
-See plan §H (repo name, framework, hosting, ship-before-chat, sync method, reviewed-badge bar).
+Locked 3 Nov 2026 (Derek): `site/` in this repo · custom Next.js MDX · separate host (VM `chatlegal`, 192.168.10.34) · ship `/docs` before chat · build-time read of sibling `docs/`.
+
+Still open: counsel "reviewed" badge depth. See plan §H.
