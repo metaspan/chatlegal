@@ -554,6 +554,58 @@ a:hover { text-decoration-thickness: 2px; }
   overflow: hidden;
 }
 
+.waitlist-sending,
+.waitlist-error {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.55rem;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.waitlist-sending {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--banner-bg);
+}
+
+.waitlist-error {
+  background: var(--callout-bg);
+  border-left: 4px solid var(--banner-bg);
+}
+
+.waitlist-success {
+  margin-top: 1rem;
+  padding: 1.35rem 1.3rem 1.45rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--banner-bg);
+  border-radius: 0.85rem;
+  box-shadow: var(--shadow);
+}
+
+.waitlist-success:focus {
+  outline: 2px solid var(--link);
+  outline-offset: 3px;
+}
+
+.waitlist-success h3 {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 1.85rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 0 0 0.45rem;
+}
+
+.waitlist-success p {
+  margin: 0;
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+
 .grecaptcha-badge {
   visibility: hidden;
 }
@@ -609,6 +661,8 @@ button.home-cta:disabled {
   .nav-open .sidebar { display: block; }
 
   .home-wrap h1 { font-size: 2.15rem; }
+
+  .waitlist-success h3 { font-size: 1.55rem; }
 
   .prose h1 { font-size: 2rem; }
 }

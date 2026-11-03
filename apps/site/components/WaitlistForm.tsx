@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { honeypotFilled, WAITLIST_ACTION, WAITLIST_PATH, waitlistPayload } from '@/lib/waitlist'
 
 type Grecaptcha = {
@@ -23,6 +23,7 @@ export function WaitlistForm() {
   const [company, setCompany] = useState('')
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
   const [message, setMessage] = useState('')
+  const successRef = useRef<HTMLDivElement>(null)
   const open = siteKey.length > 0
 
   useEffect(() => {
@@ -34,6 +35,11 @@ export function WaitlistForm() {
     script.dataset.recaptcha = 'v3'
     document.head.appendChild(script)
   }, [open])
+
+  useEffect(() => {
+    if (status !== 'sent') return
+    successRef.current?.focus()
+  }, [status])
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -79,11 +85,23 @@ export function WaitlistForm() {
   }
 
   if (status === 'sent') {
-    return <p className="waitlist-note">{message}</p>
+    const address = email.trim()
+    return (
+      <div className="waitlist-success" role="status" tabIndex={-1} ref={successRef}>
+        <h3>{message}</h3>
+        <p>
+          {address
+            ? `We'll email you at ${address} when the beta opens.`
+            : "We'll email you when the beta opens."}
+        </p>
+      </div>
+    )
   }
 
+  const sending = status === 'sending'
+
   return (
-    <form className="waitlist" onSubmit={onSubmit} noValidate={false}>
+    <form className="waitlist" onSubmit={onSubmit} noValidate={false} aria-busy={sending}>
       {!open ? <p className="waitlist-note">Waitlist opening soon.</p> : null}
       <label>
         Name <span>optional</span>
@@ -93,7 +111,7 @@ export function WaitlistForm() {
           autoComplete="name"
           maxLength={120}
           value={name}
-          disabled={!open || status === 'sending'}
+          disabled={!open || sending}
           onChange={(event) => setName(event.target.value)}
         />
       </label>
@@ -106,7 +124,7 @@ export function WaitlistForm() {
           required
           maxLength={254}
           value={email}
-          disabled={!open || status === 'sending'}
+          disabled={!open || sending}
           onChange={(event) => setEmail(event.target.value)}
         />
       </label>
@@ -117,7 +135,7 @@ export function WaitlistForm() {
           rows={3}
           maxLength={1000}
           value={note}
-          disabled={!open || status === 'sending'}
+          disabled={!open || sending}
           onChange={(event) => setNote(event.target.value)}
         />
       </label>
@@ -134,9 +152,23 @@ export function WaitlistForm() {
           />
         </label>
       </div>
-      {message ? <p className="waitlist-note">{message}</p> : null}
-      <button className="home-cta" type="submit" disabled={!open || status === 'sending'}>
-        {status === 'sending' ? 'Sending…' : 'Join the waitlist'}
+      {sending ? (
+        <p className="waitlist-sending" role="status">
+          Sending your details…
+        </p>
+      ) : null}
+      {status === 'error' ? (
+        <p className="waitlist-error" id="waitlist-error" role="alert">
+          {message}
+        </p>
+      ) : null}
+      <button
+        className="home-cta"
+        type="submit"
+        disabled={!open || sending}
+        aria-describedby={status === 'error' ? 'waitlist-error' : undefined}
+      >
+        {sending ? 'Sending…' : status === 'error' ? 'Try again' : 'Join the waitlist'}
       </button>
       {open ? (
         <p className="waitlist-fine">
