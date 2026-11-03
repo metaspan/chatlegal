@@ -9,6 +9,7 @@ import { ChatColumn } from './chat/chat-column.tsx'
 import { DisclaimerBar } from './disclaimer-bar.tsx'
 import { DocumentViewer } from './shell/document-viewer.tsx'
 import { HistoryPane } from './shell/history-pane.tsx'
+import { PaneEdgeToggle } from './shell/pane-edge-toggle.tsx'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 
@@ -178,8 +179,15 @@ describe('dashboard shell', () => {
     assert.match(shell, /DisclaimerBar/)
     assert.match(shell, /data-chat-resize-root/)
     assert.match(shell, /data-shell="three-pane"/)
+    assert.match(shell, /data-pane-rail/)
+    assert.match(shell, /data-left-open/)
+    assert.match(shell, /data-right-open/)
+    assert.match(shell, /escapeRestoresLeftPane/)
+    assert.match(shell, /setLeftOpen\(true\)/)
+    assert.match(shell, /When both side panes are hidden, Escape shows chats/)
     assert.match(shell, /max-md:hidden/)
     assert.match(shell, /mobileLeft/)
+    assert.match(shell, /PaneEdgeToggle/)
     assert.match(bar, /Hide chats/)
     assert.match(bar, /Show chats/)
     assert.match(bar, /Hide viewer/)
@@ -190,6 +198,19 @@ describe('dashboard shell', () => {
     assert.match(bar, /data-chrome="burgundy"/)
     assert.match(bar, /bg-chrome/)
     assert.doesNotMatch(combined, /CompanySwitcher|OrganizationSwitcher/)
+
+    const hiddenChats = renderToStaticMarkup(createElement(PaneEdgeToggle, { side: 'left', open: false, onToggle: () => {} }))
+    assert.match(hiddenChats, /data-pane-edge="left"/)
+    assert.match(hiddenChats, /data-pane-open="false"/)
+    assert.match(hiddenChats, /aria-label="Show chats"/)
+    assert.match(hiddenChats, /aria-expanded="false"/)
+    assert.match(hiddenChats, /aria-controls="history-pane"/)
+
+    const openViewer = renderToStaticMarkup(createElement(PaneEdgeToggle, { side: 'right', open: true, onToggle: () => {} }))
+    assert.match(openViewer, /data-pane-edge="right"/)
+    assert.match(openViewer, /data-pane-open="true"/)
+    assert.match(openViewer, /aria-label="Hide viewer"/)
+    assert.match(openViewer, /aria-controls="document-viewer"/)
     const libraryHook = fs.readFileSync(path.join(here, 'shell/use-library.ts'), 'utf8')
     assert.match(libraryHook, /\/api\/library/)
     assert.match(libraryHook, /\/api\/matters\//)
