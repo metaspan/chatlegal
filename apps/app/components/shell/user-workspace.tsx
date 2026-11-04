@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { File, FileCode, FileJson, FileText, Search } from 'lucide-react'
+import { useActiveMatterId } from '@/components/shell/active-matter'
 import { useRightPaneActions } from '@/components/shell/right-pane-actions'
 import { useLibrary } from '@/components/shell/use-library'
 import { Button } from '@/components/ui/button'
@@ -17,7 +18,8 @@ import { cn } from '@/lib/utils'
  * The detail column adapts the empty state and filename line from
  * apps/web/components/workspace/workspace-file-pane.tsx.
  * Files stay flat: ChatLegal library names are one segment, via /api/library.
- * Moving a file into a matter stays on /api/workspace/move for a later pass.
+ * Add to this matter copies the file onto the open matter and leaves this copy.
+ * Move to this matter uses the same workspace route and takes it off the library.
  * Open sends the selected file to the right pane. This column keeps the name
  * and size only. The file text stays out of both places.
  */
@@ -59,7 +61,8 @@ export function UserWorkspace({
   initialSelectedName?: string | null
   onOpenFile?: (file: { name: string; scope: 'user' }) => void
 }) {
-  const library = useLibrary(null, { files: initialFiles, error: initialError })
+  const matterId = useActiveMatterId()
+  const library = useLibrary(matterId, { files: initialFiles, error: initialError })
   const rightPane = useRightPaneActions()
   const [query, setQuery] = useState('')
   const [selectedName, setSelectedName] = useState<string | null>(initialSelectedName)
@@ -144,7 +147,7 @@ export function UserWorkspace({
               <p className="text-xs text-muted-foreground">
                 {selected.size} bytes · {updatedLabel(selected.updatedAt)}
               </p>
-              <div>
+              <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -158,7 +161,43 @@ export function UserWorkspace({
                 >
                   Open
                 </Button>
+                {matterId ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    aria-label={`Add ${selected.name} to this matter`}
+                    disabled={library.movingName === selected.name}
+                    onClick={() => void library.attachToMatter(selected.name)}
+                  >
+                    {library.movingName === selected.name && library.movingMode === 'copy' ? 'Adding…' : 'Add to this matter'}
+                  </Button>
+                ) : null}
+                {matterId ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Move ${selected.name} to this matter`}
+                    disabled={library.movingName === selected.name}
+                    onClick={() => void library.moveToMatter(selected.name)}
+                  >
+                    {library.movingName === selected.name && library.movingMode === 'move' ? 'Moving…' : 'Move to this matter'}
+                  </Button>
+                ) : null}
               </div>
+              {matterId ? (
+                <p className="text-xs text-muted-foreground">
+                  Add keeps this file in your library and puts a copy on the open matter. Move takes it off your library.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Open a chat to add this file to a matter.</p>
+              )}
+              {library.matterError ? (
+                <p role="alert" className="text-sm text-muted-foreground">
+                  {library.matterError}
+                </p>
+              ) : null}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Select a file from the list to see it.</p>

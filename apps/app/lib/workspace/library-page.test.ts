@@ -7,6 +7,7 @@ import { createElement, type ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { withProcessEnvLock } from '../process-env-lock.ts'
 import { writeUserFile } from './store.ts'
+import { ActiveMatterProvider } from '../../components/shell/active-matter.tsx'
 import { UserWorkspace } from '../../components/shell/user-workspace.tsx'
 
 type PageComponent = () => Promise<ReactElement>
@@ -68,9 +69,34 @@ describe('library page', () => {
     assert.match(html, /data-library-open="notice.txt"/)
     assert.match(html, /aria-label="Open notice.txt"/)
     assert.match(html, /22 bytes/)
+    assert.match(html, /Open a chat to add this file to a matter/)
+    assert.doesNotMatch(html, /Add notice.txt to this matter/)
     assert.doesNotMatch(html, /Select a file from the list to see it/)
     assert.doesNotMatch(html, /This file is open in the viewer/)
     const source = fs.readFileSync(new URL('../../components/shell/user-workspace.tsx', import.meta.url), 'utf8')
+    assert.match(source, /openDocument/)
+    assert.match(source, /attachToMatter/)
+  })
+
+  it('can add or move a selected library file onto the open matter', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        ActiveMatterProvider,
+        { matterId: 'matter-1' },
+        createElement(UserWorkspace, {
+          initialFiles: [{ name: 'notice.txt', size: 22, updatedAt: '2026-11-03T00:00:00.000Z' }],
+          initialSelectedName: 'notice.txt',
+        }),
+      ),
+    )
+    assert.match(html, /aria-label="Open notice.txt"/)
+    assert.match(html, /aria-label="Add notice.txt to this matter"/)
+    assert.match(html, /aria-label="Move notice.txt to this matter"/)
+    assert.match(html, /Add keeps this file in your library and puts a copy on the open matter/)
+    assert.doesNotMatch(html, /Open a chat to add this file to a matter/)
+    assert.doesNotMatch(html, /solicitor|claimant|defendant/i)
+    const source = fs.readFileSync(new URL('../../components/shell/user-workspace.tsx', import.meta.url), 'utf8')
+    assert.match(source, /scope: 'user'/)
     assert.match(source, /openDocument/)
   })
 })

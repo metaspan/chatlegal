@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { withProcessEnvLock } from '../process-env-lock.ts'
 import { createMatter, disconnectMatterStore, getMatterStore } from '../matters/store.ts'
-import { readMatterFile, readMatterFileBytes, readUserFile, writeMatterFile } from './store.ts'
+import { readMatterFile, readMatterFileBytes, readUserFile, readUserFileBytes, writeMatterFile } from './store.ts'
 
 describe('workspace routes', () => {
   it('moves a file between the library and a matter, and hides another user', async () => {
@@ -85,6 +85,21 @@ describe('workspace routes', () => {
         assert.equal(await readUserFile('user_test', 'notice.txt'), 'Bring the agreement.')
         assert.deepEqual(await readMatterFile('user_test', own.id, 'notice.txt'), null)
 
+        const attached = await move.POST(
+          new Request('http://localhost/api/workspace/move', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: 'notice.txt',
+              from: { kind: 'user' },
+              to: { kind: 'matter', matterId: own.id },
+              mode: 'copy',
+            }),
+          }),
+        )
+        assert.equal(attached.status, 200)
+        assert.equal(await readUserFile('user_test', 'notice.txt'), 'Bring the agreement.')
+        assert.equal(await readMatterFile('user_test', own.id, 'notice.txt'), 'Bring the agreement.')
+
         const hidden = await matterFiles.GET(new Request('http://localhost/api/matters/' + other.id + '/files'), {
           params: Promise.resolve({ matterId: other.id }),
         })
@@ -132,12 +147,54 @@ describe('workspace routes', () => {
         assert.equal(uploadedBody.file.size, pdf.length)
         assert.deepEqual(await readMatterFileBytes('user_test', own.id, 'Council-letter.PDF'), pdf)
 
+        const copied = await move.POST(
+          new Request('http://localhost/api/workspace/move', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: 'Council-letter.PDF',
+              from: { kind: 'matter', matterId: own.id },
+              to: { kind: 'user' },
+              mode: 'copy',
+            }),
+          }),
+        )
+        assert.equal(copied.status, 200)
+        assert.deepEqual(await readUserFileBytes('user_test', 'Council-letter.PDF'), pdf)
+        assert.deepEqual(await readMatterFileBytes('user_test', own.id, 'Council-letter.PDF'), pdf)
+
+        const copiedAgain = await move.POST(
+          new Request('http://localhost/api/workspace/move', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: 'Council-letter.PDF',
+              from: { kind: 'matter', matterId: own.id },
+              to: { kind: 'user' },
+              mode: 'copy',
+            }),
+          }),
+        )
+        assert.equal(copiedAgain.status, 409)
+
+        const badMode = await move.POST(
+          new Request('http://localhost/api/workspace/move', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: 'Council-letter.PDF',
+              from: { kind: 'user' },
+              to: { kind: 'matter', matterId: own.id },
+              mode: 'link',
+            }),
+          }),
+        )
+        assert.equal(badMode.status, 400)
+        assert.match(await badMode.text(), /move or copy/)
+
         const afterUpload = await matterFiles.GET(new Request('http://localhost/api/matters/' + own.id + '/files'), {
           params: Promise.resolve({ matterId: own.id }),
         })
         assert.deepEqual(
           ((await afterUpload.json()) as { files: { name: string }[] }).files.map((file) => file.name),
-          ['Council-letter.PDF'],
+          ['Council-letter.PDF', 'notice.txt'],
         )
 
         const textForm = new FormData()

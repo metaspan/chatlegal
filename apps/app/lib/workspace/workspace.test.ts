@@ -6,12 +6,14 @@ import path from 'node:path'
 import { createMatter, createMatterStore, type MatterStore } from '../matters/store.ts'
 import { matterWorkspaceDir, userLibraryDir, workspaceRoot, WorkspaceConflictError, WorkspacePathError } from './paths.ts'
 import {
+  copyWorkspaceFile,
   listMatterFiles,
   listUserFiles,
   moveWorkspaceFile,
   readMatterFile,
   readMatterFileBytes,
   readUserFile,
+  readUserFileBytes,
   writeMatterFile,
   writeMatterFileBytes,
   writeUserFile,
@@ -133,6 +135,70 @@ describe('mastra workspace files', () => {
       assert.equal(toLibrary.ok, true)
       assert.equal(await readUserFile('user_a', 'notice.txt', options), 'Bring the agreement.')
       assert.deepEqual(await listMatterFiles('user_a', matter.id, options), [])
+    })
+  })
+
+  it('copies a library file onto a matter and leaves the original', async () => {
+    await withFixture(async (options) => {
+      const matter = await createMatter(options.matters!, 'user_a', { title: 'Deposit' })
+      const other = await createMatter(options.matters!, 'user_b', { title: 'Secret matter' })
+      await writeUserFile('user_a', 'notice.txt', 'Bring the agreement.', options)
+      await writeMatterFile('user_b', other.id, 'secret.txt', 'other user secret text', options)
+
+      const copied = await copyWorkspaceFile(
+        'user_a',
+        { name: 'notice.txt', from: { kind: 'user' }, to: { kind: 'matter', matterId: matter.id } },
+        options,
+      )
+      assert.equal(copied.ok, true)
+      if (!copied.ok) return
+      assert.equal(copied.file.name, 'notice.txt')
+      assert.equal(await readUserFile('user_a', 'notice.txt', options), 'Bring the agreement.')
+      assert.equal(await readMatterFile('user_a', matter.id, 'notice.txt', options), 'Bring the agreement.')
+
+      const again = await copyWorkspaceFile(
+        'user_a',
+        { name: 'notice.txt', from: { kind: 'user' }, to: { kind: 'matter', matterId: matter.id } },
+        options,
+      )
+      assert.deepEqual(again, { ok: false, reason: 'conflict' })
+      assert.equal(await readUserFile('user_a', 'notice.txt', options), 'Bring the agreement.')
+
+      const stolen = await copyWorkspaceFile(
+        'user_a',
+        { name: 'secret.txt', from: { kind: 'matter', matterId: other.id }, to: { kind: 'user' } },
+        options,
+      )
+      assert.deepEqual(stolen, { ok: false, reason: 'matter' })
+      assert.equal(await readUserFile('user_a', 'secret.txt', options), null)
+
+      const pdf = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x00, 0xff, 0xfe])
+      await writeMatterFileBytes('user_a', matter.id, 'letter.pdf', pdf, options)
+      const pdfCopy = await copyWorkspaceFile(
+        'user_a',
+        { name: 'letter.pdf', from: { kind: 'matter', matterId: matter.id }, to: { kind: 'user' } },
+        options,
+      )
+      assert.equal(pdfCopy.ok, true)
+      assert.deepEqual(await readUserFileBytes('user_a', 'letter.pdf', options), pdf)
+      assert.deepEqual(await readMatterFileBytes('user_a', matter.id, 'letter.pdf', options), pdf)
+
+      const moved = await moveWorkspaceFile(
+        'user_a',
+        { name: 'letter.pdf', from: { kind: 'user' }, to: { kind: 'matter', matterId: matter.id } },
+        options,
+      )
+      assert.deepEqual(moved, { ok: false, reason: 'conflict' })
+      assert.deepEqual(await readUserFileBytes('user_a', 'letter.pdf', options), pdf)
+
+      await assert.rejects(
+        copyWorkspaceFile(
+          'user_a',
+          { name: 'notice.txt', from: { kind: 'user' }, to: { kind: 'user' } },
+          options,
+        ),
+        WorkspacePathError,
+      )
     })
   })
 

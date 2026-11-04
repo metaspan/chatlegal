@@ -15,7 +15,9 @@ import {
 import {
   sanitizeUploadFileName,
   UPLOAD_NAME_ERROR,
+  UPLOAD_SIZE_ERROR,
   uploadRejection,
+  WORKSPACE_MAX_UPLOAD_BYTES,
 } from './upload-policy'
 import type { MoveWorkspaceFileResult, WorkspaceFile, WorkspaceScope } from './types'
 
@@ -29,8 +31,11 @@ import type { MoveWorkspaceFileResult, WorkspaceFile, WorkspaceScope } from './t
  * Containment stays on, so a path cannot leave its base directory.
  *
  * The library and each matter are separate workspaces. A file moves from
- * one to the other by read, write, and delete. That move is what a later
- * Concierge calls. It is not an agent tool yet.
+ * one to the other by read, write, and delete. A copy is the same read and
+ * write, and the source stays. The signed-in pages call that. It is not an
+ * agent tool. dcolley/tourbillon@7a8595b
+ * apps/web/components/workspace/workspace-file-pane.tsx renames inside one
+ * workspace and does not attach a file to another.
  *
  * A matter upload writes the original bytes through the same LocalFilesystem
  * (contained, tools off). PDF, Word, and Markdown only, up to 10 MB.
@@ -144,6 +149,37 @@ async function writeBytesAt(basePath: string, name: string, bytes: Buffer): Prom
   const safe = workspaceFileName(safeName)
   const rejection = uploadRejection(safe, bytes.length)
   if (rejection) throw new WorkspacePathError(rejection)
+  return withFilesystem(basePath, async (disk) => {
+    if (await disk.exists(safe)) {
+      throw new WorkspaceConflictError('A file with that name is already there.')
+    }
+    try {
+      await disk.writeFile(safe, bytes, { overwrite: false })
+    } catch (error) {
+      if (error instanceof FileExistsError) {
+        throw new WorkspaceConflictError('A file with that name is already there.')
+      }
+      throw error
+    }
+    const info = await disk.stat(safe)
+    if (info.type !== 'file' || info.size !== bytes.length) {
+      await disk.deleteFile(safe).catch(() => undefined)
+      throw new WorkspacePathError('The file could not be stored in full.')
+    }
+    return toFile(safe, info)
+  })
+}
+
+/**
+ * Bytes already stored in a workspace the user owns.
+ * The upload type check stays on new uploads. A copy or move keeps the name
+ * and the original bytes, including a PDF or Word document.
+ */
+async function writeOwnedBytes(basePath: string, name: string, bytes: Buffer): Promise<WorkspaceFile> {
+  const safe = workspaceFileName(name)
+  if (bytes.length > WORKSPACE_MAX_UPLOAD_BYTES) {
+    throw new WorkspacePathError(UPLOAD_SIZE_ERROR)
+  }
   return withFilesystem(basePath, async (disk) => {
     if (await disk.exists(safe)) {
       throw new WorkspaceConflictError('A file with that name is already there.')
@@ -293,15 +329,19 @@ export async function writeMatterFileBytes(
   return writeBytesAt(base, name, bytes)
 }
 
+type WorkspaceTransfer = { name: string; from: WorkspaceScope; to: WorkspaceScope }
+
 /**
- * Move one file between the user's library and a matter they own.
+ * Copy or move one file between the user's library and a matter they own.
  * `reason: 'matter'` means a matter in the request is not theirs.
  * `reason: 'file'` means the source file is not there.
  * The source stays put when the destination already has that name.
+ * Copy leaves the source in place. Move removes it after the write.
  */
-export async function moveWorkspaceFile(
+async function transferWorkspaceFile(
   userId: string,
-  input: { name: string; from: WorkspaceScope; to: WorkspaceScope },
+  input: WorkspaceTransfer,
+  mode: 'move' | 'copy',
   options?: WorkspaceStoreOptions,
 ): Promise<MoveWorkspaceFileResult> {
   const name = workspaceFileName(input.name)
@@ -311,15 +351,16 @@ export async function moveWorkspaceFile(
   const from = await scopeBase(userId, input.from, options)
   const to = await scopeBase(userId, input.to, options)
   if (!from || !to) return { ok: false, reason: 'matter' }
-  const text = await readAt(from, name)
-  if (text === null) return { ok: false, reason: 'file' }
+  const bytes = await readBytesAt(from, name)
+  if (!bytes) return { ok: false, reason: 'file' }
   let written: WorkspaceFile
   try {
-    written = await writeAt(to, name, text)
+    written = await writeOwnedBytes(to, name, bytes)
   } catch (error) {
     if (error instanceof WorkspaceConflictError) return { ok: false, reason: 'conflict' }
     throw error
   }
+  if (mode === 'copy') return { ok: true, file: written }
   try {
     await deleteAt(from, name)
   } catch (error) {
@@ -329,4 +370,22 @@ export async function moveWorkspaceFile(
     }
   }
   return { ok: true, file: written }
+}
+
+/** Move one file. The source is removed after the destination has the bytes. */
+export async function moveWorkspaceFile(
+  userId: string,
+  input: WorkspaceTransfer,
+  options?: WorkspaceStoreOptions,
+): Promise<MoveWorkspaceFileResult> {
+  return transferWorkspaceFile(userId, input, 'move', options)
+}
+
+/** Copy one file. The library or matter it came from keeps its copy. */
+export async function copyWorkspaceFile(
+  userId: string,
+  input: WorkspaceTransfer,
+  options?: WorkspaceStoreOptions,
+): Promise<MoveWorkspaceFileResult> {
+  return transferWorkspaceFile(userId, input, 'copy', options)
 }

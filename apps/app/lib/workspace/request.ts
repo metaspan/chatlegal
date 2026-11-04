@@ -76,13 +76,31 @@ export function readFileText(body: Record<string, unknown>): string {
   return text
 }
 
-/** Concierge move body: `{ name, from, to }` where each place is the library or a matter. */
-export function readMoveBody(body: Record<string, unknown>): { name: string; from: WorkspaceScope; to: WorkspaceScope } {
+export type WorkspaceTransferMode = 'move' | 'copy'
+
+/**
+ * Move body: `{ name, from, to, mode? }`.
+ * Each place is the library or a matter. A missing mode moves.
+ * `mode: 'copy'` keeps the file where it was.
+ */
+export function readMoveBody(body: Record<string, unknown>): {
+  name: string
+  from: WorkspaceScope
+  to: WorkspaceScope
+  mode: WorkspaceTransferMode
+} {
   return {
     name: readFileName(body),
     from: readScope(body.from, 'From'),
     to: readScope(body.to, 'To'),
+    mode: readTransferMode(body.mode),
   }
+}
+
+function readTransferMode(value: unknown): WorkspaceTransferMode {
+  if (value === undefined) return 'move'
+  if (value === 'move' || value === 'copy') return value
+  throw new WorkspaceRequestError('Say whether to move or copy the file.')
 }
 
 function readScope(value: unknown, label: string): WorkspaceScope {

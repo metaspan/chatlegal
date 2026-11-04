@@ -5,9 +5,10 @@ import { workspaceFilesFromJson, type WorkspaceFile, type WorkspaceScope } from 
 
 /**
  * The signed-in user's library, and the open matter's files when a matter is open.
- * The workspace page calls this. The left pane does not.
- * The server scopes every request to the Clerk user. Move goes through
- * /api/workspace/move so a later Concierge can use the same call.
+ * The library page and the Work list call this. The left pane does not.
+ * The server scopes every request to the Clerk user.
+ * Add copies through POST /api/workspace/move with mode copy.
+ * Move uses the same route and takes the file off the place it left.
  */
 
 export type LibrarySeed = {
@@ -36,6 +37,7 @@ export function useLibrary(matterId: string | null, seed?: LibrarySeed) {
   const [adding, setAdding] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [movingName, setMovingName] = useState<string | null>(null)
+  const [movingMode, setMovingMode] = useState<'move' | 'copy' | null>(null)
 
   async function reloadLibrary(): Promise<boolean> {
     const response = await fetch('/api/library', { cache: 'no-store' })
@@ -180,38 +182,57 @@ export function useLibrary(matterId: string | null, seed?: LibrarySeed) {
     }
   }
 
-  async function moveFile(name: string, from: WorkspaceScope, to: WorkspaceScope) {
+  async function transferFile(
+    name: string,
+    from: WorkspaceScope,
+    to: WorkspaceScope,
+    mode: 'move' | 'copy',
+  ): Promise<boolean> {
     setMovingName(name)
+    setMovingMode(mode)
     setError(null)
     setMatterError(null)
+    const toMatter = to.kind === 'matter'
+    const fallback = mode === 'copy' ? 'The file could not be added to this matter.' : 'The file could not be moved.'
     try {
       const response = await fetch('/api/workspace/move', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name, from, to }),
+        body: JSON.stringify({ name, from, to, mode }),
         cache: 'no-store',
       })
       if (!response.ok) {
-        setError(await errorText(response, 'The file could not be moved.'))
-        return
+        const message = await errorText(response, fallback)
+        if (toMatter) setMatterError(message)
+        else setError(message)
+        return false
       }
-      await reloadLibrary()
-      if (matterId) await reloadMatter(matterId)
+      const libraryOk = await reloadLibrary()
+      const matterOk = matterId ? await reloadMatter(matterId) : true
+      return libraryOk && matterOk
     } catch {
-      setError('The file could not be moved.')
+      if (toMatter) setMatterError(fallback)
+      else setError(fallback)
+      return false
     } finally {
       setMovingName(null)
+      setMovingMode(null)
     }
   }
 
-  function moveToMatter(name: string) {
-    if (!matterId) return
-    void moveFile(name, { kind: 'user' }, { kind: 'matter', matterId })
+  function attachToMatter(name: string): Promise<boolean> {
+    if (!matterId) return Promise.resolve(false)
+    return transferFile(name, { kind: 'user' }, { kind: 'matter', matterId }, 'copy')
   }
 
-  function moveToLibrary(name: string) {
-    if (!matterId) return
-    void moveFile(name, { kind: 'matter', matterId }, { kind: 'user' })
+  function moveToMatter(name: string): Promise<boolean> {
+    if (!matterId) return Promise.resolve(false)
+    return transferFile(name, { kind: 'user' }, { kind: 'matter', matterId }, 'move')
+  }
+
+  function moveToLibrary(name: string): Promise<boolean> {
+    if (!matterId) return Promise.resolve(false)
+    return transferFile(name, { kind: 'matter', matterId }, { kind: 'user' }, 'move')
   }
 
   return {
@@ -224,8 +245,10 @@ export function useLibrary(matterId: string | null, seed?: LibrarySeed) {
     matterLoaded,
     matterError,
     movingName,
+    movingMode,
     addFile,
     uploadMatterFile,
+    attachToMatter,
     moveToMatter,
     moveToLibrary,
   }
