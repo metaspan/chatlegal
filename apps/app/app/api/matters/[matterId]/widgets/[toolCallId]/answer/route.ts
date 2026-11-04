@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { MatterWidgetError, parseJsonObject } from '@/lib/matters/ask-choice'
 import { presentStoredMatterMessage } from '@/lib/matters/message'
+import { appendFirstTurnContinuation } from '@/lib/matters/seed-first-turn'
 import { answerAskChoice, getMatterStore } from '@/lib/matters/store'
+import type { MatterMessage } from '@/lib/matters/types'
 import { requireConsumerSession } from '@/lib/session-guards'
 
 export const runtime = 'nodejs'
@@ -12,6 +14,7 @@ type RouteContext = { params: Promise<{ matterId: string; toolCallId: string }> 
 /**
  * Stores one pick for an askChoice card on the signed-in user's matter.
  * A card that already has an answer is refused and returned unchanged.
+ * A first-turn card also stores a short templated note. Other cards do not.
  * TODO(G-01 Concierge): pass `{ widget, version, answer }` back to the run.
  * This route does not call a model.
  */
@@ -20,7 +23,8 @@ export async function POST(request: Request, context: RouteContext) {
   const { matterId, toolCallId } = await context.params
   try {
     const answer = parseJsonObject(await request.text(), 'That answer is too large.')
-    const result = await answerAskChoice(await getMatterStore(), session.userId, matterId, toolCallId, answer)
+    const store = await getMatterStore()
+    const result = await answerAskChoice(store, session.userId, matterId, toolCallId, answer)
     if (!result.ok && result.reason === 'missing') {
       return NextResponse.json({ error: 'That question was not found.' }, { status: 404 })
     }
@@ -40,7 +44,16 @@ export async function POST(request: Request, context: RouteContext) {
       )
     }
     if (!result.ok) return NextResponse.json({ error: 'That answer could not be saved.' }, { status: 400 })
-    return NextResponse.json({ message: presentStoredMatterMessage(result.message) })
+    let followUp: MatterMessage | null = null
+    try {
+      followUp = await appendFirstTurnContinuation(store, session.userId, matterId, result.message)
+    } catch (error) {
+      console.error('first turn note failed', error)
+    }
+    return NextResponse.json({
+      message: presentStoredMatterMessage(result.message),
+      ...(followUp ? { followUp: presentStoredMatterMessage(followUp) } : {}),
+    })
   } catch (error) {
     if (error instanceof MatterWidgetError) {
       return NextResponse.json({ error: error.message }, { status: 400 })

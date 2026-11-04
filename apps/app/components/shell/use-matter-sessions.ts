@@ -12,6 +12,7 @@ import {
   presentStoredMatterMessage,
   resolveMatterMessageText,
 } from '@/lib/matters/message'
+import { matterOpenedFromCreate } from '@/lib/matters/first-turn'
 import { isMatterObservations } from '@/lib/matters/present'
 import type { AskChoiceAnswer, MatterMessage, MatterObservations, MatterSummary, MatterThread, MatterThreadStatus } from '@/lib/matters/types'
 
@@ -22,7 +23,6 @@ type OpenMatter = {
 }
 
 type MatterListResponse = { matters?: MatterSummary[] }
-type MatterCreateResponse = { matter?: MatterSummary }
 
 /**
  * Left-pane history and the centre thread for the signed-in user.
@@ -31,9 +31,11 @@ type MatterCreateResponse = { matter?: MatterSummary }
  * Send appends the user's words on that matter. A failed or timed-out send
  * returns without dropping the caller's copy; the composer queue keeps it.
  * A model reply is not requested.
+ * New chat opens the matter on its scripted first turn.
  * An askChoice card already on the matter can be answered here. The pick is
- * stored on that same thread. TODO(G-01 Concierge): stream the assistant reply
- * after the message is stored, and emit askChoice from the model.
+ * stored on that same thread. A first-turn card may add a templated note.
+ * TODO(G-01 Concierge): stream the assistant reply after the message is stored,
+ * and emit askChoice from the model.
  */
 export function useMatterSessions() {
   const [matters, setMatters] = useState<MatterSummary[]>([])
@@ -232,8 +234,9 @@ export function useMatterSessions() {
           cache: 'no-store',
         },
       )
-      const body = (await response.json().catch(() => null)) as { message?: unknown } | null
+      const body = (await response.json().catch(() => null)) as { message?: unknown; followUp?: unknown } | null
       const saved = body && isStoredMatterMessage(body.message) ? presentStoredMatterMessage(body.message) : null
+      const followUp = body && isStoredMatterMessage(body.followUp) ? presentStoredMatterMessage(body.followUp) : null
       if (response.status === 409 && saved && activeIdRef.current === matterId) {
         setThread((open) => {
           if (!open || open.matter.id !== matterId) return open
@@ -245,10 +248,11 @@ export function useMatterSessions() {
       if (activeIdRef.current === matterId) {
         setThread((open) => {
           if (!open || open.matter.id !== matterId) return open
+          const withAnswer = messagesReplacing(open.messages, saved)
           return {
             ...open,
             matter: { ...open.matter, updatedAt: saved.widget?.answeredAt ?? saved.createdAt },
-            messages: messagesReplacing(open.messages, saved),
+            messages: followUp ? messagesReplacing(withAnswer, followUp) : withAnswer,
           }
         })
       }
@@ -278,11 +282,11 @@ export function useMatterSessions() {
         cache: 'no-store',
       })
       if (!response.ok) throw new Error('create')
-      const body = (await response.json()) as MatterCreateResponse
-      if (!body.matter?.id) throw new Error('create')
-      const matter = body.matter
+      const opened = matterOpenedFromCreate(await response.json())
+      if (!opened) throw new Error('create')
+      const matter = opened.matter
       setMatters((current) => [matter, ...current.filter((item) => item.id !== matter.id)])
-      choose(matter.id, { matter, messages: [], observations: null })
+      choose(matter.id, { matter, messages: opened.messages, observations: null })
     } catch {
       setListError('A new matter could not be opened.')
     } finally {

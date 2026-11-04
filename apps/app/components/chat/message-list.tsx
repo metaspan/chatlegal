@@ -1,4 +1,5 @@
 import { AskChoiceCard } from '@/components/chat/ask-choice-card'
+import { LinkedText } from '@/components/chat/linked-text'
 import { toolUseLabel } from '@/lib/matters/present'
 import type { AskChoiceAnswer, MatterMessage } from '@/lib/matters/types'
 import { cn } from '@/lib/utils'
@@ -50,7 +51,7 @@ export function MessageList({
                   message.pending && 'opacity-70',
                 )}
               >
-                {message.text}
+                <LinkedText text={message.text} />
               </div>
             ) : null}
             {widget ? (

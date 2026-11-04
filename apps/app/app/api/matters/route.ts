@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { seedMatterFirstTurn } from '@/lib/matters/seed-first-turn'
 import { MatterTitleError } from '@/lib/matters/title'
 import { createMatter, getMatterStore, listMatters } from '@/lib/matters/store'
 import { requireConsumerSession } from '@/lib/session-guards'
@@ -42,12 +43,21 @@ export async function GET() {
   }
 }
 
+/**
+ * Opens a matter and stores the scripted first turn on it.
+ * That turn is a template. This route does not call a model.
+ */
 export async function POST(request: Request) {
   const session = await requireConsumerSession()
   try {
     const title = await readTitle(request)
-    const matter = await createMatter(await getMatterStore(), session.userId, { title })
-    return NextResponse.json({ matter }, { status: 201 })
+    const store = await getMatterStore()
+    const matter = await createMatter(store, session.userId, { title })
+    const messages = await seedMatterFirstTurn(store, session.userId, matter.id)
+    if (!messages) {
+      return NextResponse.json({ error: 'A new matter could not be opened.' }, { status: 500 })
+    }
+    return NextResponse.json({ matter, messages }, { status: 201 })
   } catch (error) {
     if (error instanceof MatterTitleError || error instanceof MatterRequestError) {
       return NextResponse.json({ error: error.message }, { status: 400 })

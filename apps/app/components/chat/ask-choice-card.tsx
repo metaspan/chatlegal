@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { LinkedText } from '@/components/chat/linked-text'
 import { Button } from '@/components/ui/button'
 import {
   checkedChoiceIds,
@@ -84,7 +85,11 @@ export function AskChoiceCard({
       data-busy={busy ? 'true' : 'false'}
     >
       <p className="font-medium whitespace-pre-wrap">{widget.question}</p>
-      {widget.detail ? <p className="whitespace-pre-wrap text-muted-foreground">{widget.detail}</p> : null}
+      {widget.detail ? (
+        <p className="whitespace-pre-wrap text-muted-foreground">
+          <LinkedText text={widget.detail} />
+        </p>
+      ) : null}
       <form className="space-y-2" onSubmit={submit}>
         <fieldset className="space-y-1" disabled={!open}>
           <legend className="sr-only">Options</legend>
@@ -124,7 +129,11 @@ export function AskChoiceCard({
                       <span className="ml-2 rounded bg-muted px-1.5 text-xs text-muted-foreground">Recommended</span>
                     ) : null}
                   </span>
-                  {option.description ? <span className="text-xs text-muted-foreground">{option.description}</span> : null}
+                  {option.description ? (
+                    <span className="text-xs text-muted-foreground">
+                      <LinkedText text={option.description} />
+                    </span>
+                  ) : null}
                 </span>
               </label>
             )

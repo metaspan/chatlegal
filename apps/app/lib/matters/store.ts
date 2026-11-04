@@ -207,9 +207,15 @@ async function readMatterObservations(
   }
 }
 
+function messageCreatedAt(value: Date | undefined): Date {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value
+  return new Date()
+}
+
 /**
  * Records a message on a matter the user owns.
  * The centre composer calls this for the user's own words.
+ * The scripted first turn also stores its notice here.
  * TODO(G-01 Concierge): stream the assistant reply after that message is stored.
  * This function does not call a model.
  */
@@ -217,12 +223,12 @@ export async function appendMatterMessage(
   store: MatterStore,
   userId: string,
   matterId: string,
-  input: { role: MatterMessage['role']; text: string },
+  input: { role: MatterMessage['role']; text: string; createdAt?: Date },
 ): Promise<MatterMessage | null> {
   const thread = await ownedThread(store, userId, matterId)
   if (!thread) return null
   const resourceId = matterResourceId(userId)
-  const createdAt = new Date()
+  const createdAt = messageCreatedAt(input.createdAt)
   const message: MastraDBMessage = {
     id: randomUUID(),
     role: input.role,
@@ -300,11 +306,12 @@ export async function appendAskChoice(
   userId: string,
   matterId: string,
   props: AskChoiceProps,
+  options: { createdAt?: Date } = {},
 ): Promise<MatterMessage | null> {
   const thread = await ownedThread(store, userId, matterId)
   if (!thread) return null
   const resourceId = matterResourceId(userId)
-  const createdAt = new Date()
+  const createdAt = messageCreatedAt(options.createdAt)
   const toolCallId = randomUUID()
   const message: MastraDBMessage = {
     id: randomUUID(),
