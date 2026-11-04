@@ -1,21 +1,36 @@
 /**
  * Plain character windows for workspace text.
- * TODO(D-03 extract): PDF and Word bytes are not chunked. The prepare call skips them.
+ * PDF and Word text is extracted before it reaches this function.
+ * A scanned PDF has no text layer, so it has nothing to chunk.
  */
 
 export const EMBED_CHUNK_CHARS = 1_200
 export const EMBED_CHUNK_OVERLAP = 200
 export const EMBED_MAX_CHUNKS = 40
 
-const TEXT_NAME = /\.(txt|md|markdown)$/i
-const BINARY_NAME = /\.(pdf|docx)$/i
+const PLAIN_TEXT_NAME = /\.(txt|md|markdown)$/i
+const PDF_NAME = /\.pdf$/i
+const DOCX_NAME = /\.docx$/i
 
-export function isIndexableFileName(name: string): boolean {
-  return TEXT_NAME.test(name)
+export function isPlainTextFileName(name: string): boolean {
+  return PLAIN_TEXT_NAME.test(name)
 }
 
-export function isStoredBinaryName(name: string): boolean {
-  return BINARY_NAME.test(name)
+export function isPdfFileName(name: string): boolean {
+  return PDF_NAME.test(name)
+}
+
+export function isDocxFileName(name: string): boolean {
+  return DOCX_NAME.test(name)
+}
+
+/** PDF and Word are read as plain text. The original bytes stay stored. */
+export function isExtractableFileName(name: string): boolean {
+  return isPdfFileName(name) || isDocxFileName(name)
+}
+
+export function isIndexableFileName(name: string): boolean {
+  return isPlainTextFileName(name) || isExtractableFileName(name)
 }
 
 export function chunkWorkspaceText(text: string): { chunks: string[]; truncated: boolean } {

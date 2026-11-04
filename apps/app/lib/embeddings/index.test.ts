@@ -5,9 +5,10 @@ import path from 'node:path'
 import { describe, it } from 'node:test'
 import { withProcessEnvLock } from '../process-env-lock.ts'
 import { createMatter, disconnectMatterStore, getMatterStore } from '../matters/store.ts'
-import { copyWorkspaceFile, listUserFiles, moveWorkspaceFile, writeMatterFileBytes, writeUserFile } from '../workspace/store.ts'
+import { copyWorkspaceFile, listUserFiles, moveWorkspaceFile, writeMatterFile, writeMatterFileBytes, writeUserFile } from '../workspace/store.ts'
 import { prepareWorkspace, searchWorkspace } from './index.ts'
-import { FILE_SEARCH_BINARY, FILE_SEARCH_OFF } from './messages.ts'
+import { FILE_SEARCH_EMPTY_FILE, FILE_SEARCH_OFF, FILE_SEARCH_UNREADABLE } from './messages.ts'
+import { docxWithText, docxWithoutText, pdfWithText } from './office-samples.test.ts'
 import { embeddingDatabaseFile } from './paths.ts'
 
 function hashEmbed(texts: string[]): number[][] {
@@ -62,6 +63,8 @@ describe('workspace embeddings', () => {
       }
       try {
         await writeUserFile('user_a', 'notice.txt', 'Bring the agreement.')
+        await writeUserFile('user_a', 'scan.pdf', '%PDF-1.4 otherpdfsecret')
+        await writeUserFile('user_a', 'reply.docx', 'wordsecretnotindexed')
         const status = await searchWorkspace('user_a', { kind: 'user' }, 'agreement', options)
         const prepared = await prepareWorkspace('user_a', { kind: 'user' }, undefined, options)
         assert.equal(status?.enabled, false)
@@ -72,6 +75,8 @@ describe('workspace embeddings', () => {
         assert.equal(fetched, 0)
         assert.equal(fs.existsSync(path.join(dir, 'workspace', 'users', 'user_a', 'index')), false)
         assert.equal(status?.message.includes('Bring the agreement'), false)
+        assert.equal(JSON.stringify(status).includes('otherpdfsecret'), false)
+        assert.equal(JSON.stringify(prepared).includes('wordsecretnotindexed'), false)
       } finally {
         if (previousDb === undefined) delete process.env.CHATLEGAL_MATTERS_DB
         else process.env.CHATLEGAL_MATTERS_DB = previousDb
@@ -143,7 +148,9 @@ describe('workspace embeddings', () => {
         await prepareWorkspace('user_b', { kind: 'user' }, undefined, options)
         const ownIndex = await prepareWorkspace('user_a', { kind: 'matter', matterId: own.id }, undefined, options)
         assert.deepEqual(ownIndex?.indexed.map((file) => file.name), ['note.md'])
-        assert.deepEqual(ownIndex?.skipped, [{ name: 'scan.pdf', reason: FILE_SEARCH_BINARY }])
+        assert.deepEqual(ownIndex?.skipped, [{ name: 'scan.pdf', reason: FILE_SEARCH_UNREADABLE }])
+        const matterBytes = fs.readFileSync(embeddingDatabaseFile('user_a', { kind: 'matter', matterId: own.id }) ?? '')
+        assert.equal(matterBytes.includes(Buffer.from('otherpdfsecret')), false)
         await prepareWorkspace('user_a', { kind: 'matter', matterId: otherMatter.id }, undefined, options)
         const hidden = await prepareWorkspace('user_a', { kind: 'matter', matterId: foreign.id }, undefined, options)
         assert.equal(hidden, null)
@@ -222,6 +229,110 @@ describe('workspace embeddings', () => {
         )
         assert.deepEqual(copyNotIndexed?.hits, [])
         assert.ok(fetched > 0)
+      } finally {
+        await disconnectMatterStore()
+        if (previousDb === undefined) delete process.env.CHATLEGAL_MATTERS_DB
+        else process.env.CHATLEGAL_MATTERS_DB = previousDb
+        if (previousRoot === undefined) delete process.env.CHATLEGAL_WORKSPACE_ROOT
+        else process.env.CHATLEGAL_WORKSPACE_ROOT = previousRoot
+        if (previousEnabled === undefined) delete process.env.CHATLEGAL_EMBED_ENABLED
+        else process.env.CHATLEGAL_EMBED_ENABLED = previousEnabled
+        if (previousModel === undefined) delete process.env.CHATLEGAL_EMBED_MODEL
+        else process.env.CHATLEGAL_EMBED_MODEL = previousModel
+        if (previousUrl === undefined) delete process.env.CHATLEGAL_EMBED_BASE_URL
+        else process.env.CHATLEGAL_EMBED_BASE_URL = previousUrl
+        fs.rmSync(dir, { recursive: true, force: true })
+      }
+    })
+  })
+
+  it('indexes PDF and Word text beside Markdown, and skips a file it cannot read', async () => {
+    await withProcessEnvLock(async () => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chatlegal-embed-extract-'))
+      const previousDb = process.env.CHATLEGAL_MATTERS_DB
+      const previousRoot = process.env.CHATLEGAL_WORKSPACE_ROOT
+      const previousEnabled = process.env.CHATLEGAL_EMBED_ENABLED
+      const previousModel = process.env.CHATLEGAL_EMBED_MODEL
+      const previousUrl = process.env.CHATLEGAL_EMBED_BASE_URL
+      process.env.CHATLEGAL_MATTERS_DB = `file:${path.join(dir, 'matters.db')}`
+      process.env.CHATLEGAL_WORKSPACE_ROOT = path.join(dir, 'workspace')
+      process.env.CHATLEGAL_EMBED_ENABLED = 'true'
+      process.env.CHATLEGAL_EMBED_MODEL = 'local-embed'
+      process.env.CHATLEGAL_EMBED_BASE_URL = 'http://127.0.0.1:11434/v1'
+      const embedded: string[] = []
+      const options = {
+        embed: async (texts: string[]) => {
+          embedded.push(...texts)
+          return hashEmbed(texts)
+        },
+        fetch: (async () => {
+          throw new Error('embeddings HTTP should not run when a test embedder is set')
+        }) as typeof fetch,
+      }
+      await disconnectMatterStore()
+      try {
+        const store = await getMatterStore()
+        const own = await createMatter(store, 'user_a', { title: 'Deposit' })
+        const foreign = await createMatter(store, 'user_b', { title: 'Secret matter' })
+        const letter = await pdfWithText('depositlettertoken in the agreement')
+        const reply = docxWithText('wordagreementtoken in the reply')
+        const blank = docxWithoutText()
+        const broken = Buffer.from('%PDF-1.4 corruptpdfsecret')
+        await writeMatterFileBytes('user_a', own.id, 'letter.pdf', letter)
+        await writeMatterFileBytes('user_a', own.id, 'reply.docx', reply)
+        await writeMatterFileBytes('user_a', own.id, 'blank.docx', blank)
+        await writeMatterFileBytes('user_a', own.id, 'broken.pdf', broken)
+        await writeMatterFile('user_a', own.id, 'note.md', 'markdownnotetoken on this matter')
+        const hiddenPdf = await pdfWithText('zetasecrettoken hidden from the other person')
+        await writeMatterFileBytes('user_b', foreign.id, 'hidden.pdf', hiddenPdf)
+
+        const hidden = await prepareWorkspace('user_a', { kind: 'matter', matterId: foreign.id }, undefined, options)
+        assert.equal(hidden, null)
+        assert.equal(fs.existsSync(embeddingDatabaseFile('user_b', { kind: 'matter', matterId: foreign.id }) ?? ''), false)
+
+        const prepared = await prepareWorkspace('user_a', { kind: 'matter', matterId: own.id }, undefined, options)
+        assert.equal(prepared?.enabled, true)
+        assert.deepEqual(prepared?.indexed.map((file) => file.name), ['letter.pdf', 'note.md', 'reply.docx'])
+        assert.deepEqual(prepared?.skipped, [
+          { name: 'blank.docx', reason: FILE_SEARCH_EMPTY_FILE },
+          { name: 'broken.pdf', reason: FILE_SEARCH_UNREADABLE },
+        ])
+        assert.match(prepared?.message ?? '', /Those files are ready to search/)
+        assert.match(prepared?.message ?? '', /could not read the words/)
+        assert.equal(embedded.some((text) => text.includes('corruptpdfsecret')), false)
+        assert.equal(embedded.some((text) => text.includes('depositlettertoken')), true)
+        assert.equal(embedded.some((text) => text.includes('wordagreementtoken')), true)
+        assert.equal(embedded.some((text) => text.includes('markdownnotetoken')), true)
+
+        const pdfHit = await searchWorkspace('user_a', { kind: 'matter', matterId: own.id }, 'depositlettertoken', options)
+        assert.deepEqual(pdfHit?.hits.map((hit) => hit.name), ['letter.pdf'])
+        assert.match(pdfHit?.hits[0]?.excerpt ?? '', /depositlettertoken/)
+        const wordHit = await searchWorkspace('user_a', { kind: 'matter', matterId: own.id }, 'wordagreementtoken', options)
+        assert.deepEqual(wordHit?.hits.map((hit) => hit.name), ['reply.docx'])
+        const noteHit = await searchWorkspace('user_a', { kind: 'matter', matterId: own.id }, 'markdownnotetoken', options)
+        assert.deepEqual(noteHit?.hits.map((hit) => hit.name), ['note.md'])
+        const secretHit = await searchWorkspace('user_a', { kind: 'matter', matterId: own.id }, 'corruptpdfsecret', options)
+        assert.deepEqual(secretHit?.hits, [])
+
+        const matterBytes = fs.readFileSync(embeddingDatabaseFile('user_a', { kind: 'matter', matterId: own.id }) ?? '')
+        assert.equal(matterBytes.includes(Buffer.from('corruptpdfsecret')), false)
+        assert.equal(matterBytes.includes(Buffer.from('zetasecrettoken')), false)
+        assert.equal(matterBytes.includes(Buffer.from('depositlettertoken')), true)
+
+        const copied = await copyWorkspaceFile('user_a', {
+          name: 'letter.pdf',
+          from: { kind: 'matter', matterId: own.id },
+          to: { kind: 'user' },
+        })
+        assert.equal(copied.ok, true)
+        const beforeLibrary = await searchWorkspace('user_a', { kind: 'user' }, 'depositlettertoken', options)
+        assert.deepEqual(beforeLibrary?.hits, [])
+        const library = await prepareWorkspace('user_a', { kind: 'user' }, undefined, options)
+        assert.deepEqual(library?.indexed.map((file) => file.name), ['letter.pdf'])
+        const libraryHit = await searchWorkspace('user_a', { kind: 'user' }, 'depositlettertoken', options)
+        assert.deepEqual(libraryHit?.hits.map((hit) => hit.name), ['letter.pdf'])
+        assert.equal(JSON.stringify(libraryHit).includes('zetasecrettoken'), false)
+        assert.equal(JSON.stringify(libraryHit).includes('wordagreementtoken'), false)
       } finally {
         await disconnectMatterStore()
         if (previousDb === undefined) delete process.env.CHATLEGAL_MATTERS_DB
