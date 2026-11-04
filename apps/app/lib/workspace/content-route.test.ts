@@ -5,8 +5,8 @@ import os from 'node:os'
 import path from 'node:path'
 import { withProcessEnvLock } from '../process-env-lock.ts'
 import { createMatter, disconnectMatterStore, getMatterStore } from '../matters/store.ts'
-import { workspaceContentType } from './content.ts'
-import { writeMatterFile, writeUserFile } from './store.ts'
+import { workspaceContentDisposition, workspaceContentType } from './content.ts'
+import { writeMatterFile, writeMatterFileBytes, writeUserFile } from './store.ts'
 
 describe('workspace content type', () => {
   it('maps markdown, images, and pdf', () => {
@@ -15,7 +15,10 @@ describe('workspace content type', () => {
     assert.equal(workspaceContentType('scan.jpeg'), 'image/jpeg')
     assert.equal(workspaceContentType('mark.svg'), 'image/svg+xml')
     assert.equal(workspaceContentType('notice.PDF'), 'application/pdf')
+    assert.equal(workspaceContentType('letter.docx'), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
     assert.equal(workspaceContentType('notes.txt'), 'text/plain; charset=utf-8')
+    assert.match(workspaceContentDisposition('letter.docx'), /^attachment;/)
+    assert.match(workspaceContentDisposition('notice.pdf'), /^inline;/)
   })
 })
 
@@ -44,6 +47,8 @@ describe('workspace content route', () => {
         await writeUserFile('user_test', 'notice.pdf', '%PDF-1.4')
         await writeMatterFile('user_test', own.id, 'reply.txt', 'A short note.')
         await writeMatterFile('user_b', other.id, 'secret.txt', 'other user secret text')
+        const docx = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0xff])
+        await writeMatterFileBytes('user_test', own.id, 'letter.docx', docx)
 
         const markdown = await content.GET(
           new Request('http://localhost/api/workspace/content?name=letter.md&scope=user'),
@@ -62,6 +67,19 @@ describe('workspace content route', () => {
         assert.equal(pdf.status, 200)
         assert.equal(pdf.headers.get('content-type'), 'application/pdf')
         assert.equal(await pdf.text(), '%PDF-1.4')
+
+        const word = await content.GET(
+          new Request(
+            `http://localhost/api/workspace/content?name=letter.docx&scope=matter&matterId=${encodeURIComponent(own.id)}`,
+          ),
+        )
+        assert.equal(word.status, 200)
+        assert.equal(
+          word.headers.get('content-type'),
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        )
+        assert.match(word.headers.get('content-disposition') ?? '', /^attachment; filename="letter\.docx"/)
+        assert.deepEqual(Buffer.from(await word.arrayBuffer()), docx)
 
         const matterFile = await content.GET(
           new Request(

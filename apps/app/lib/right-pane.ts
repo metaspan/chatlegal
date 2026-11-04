@@ -12,7 +12,7 @@
 
 import type { ViewerKind } from './viewer-kind'
 
-export const DOCUMENT_VIEWER_KINDS = ['markdown', 'image', 'pdf'] as const
+export const DOCUMENT_VIEWER_KINDS = ['markdown', 'image', 'pdf', 'docx'] as const
 
 export type DocumentViewerKind = (typeof DOCUMENT_VIEWER_KINDS)[number]
 
@@ -45,6 +45,7 @@ export function defaultRightPaneView(): RightPaneView {
 export function viewerKindForFileName(name: string): DocumentViewerKind {
   const ext = extensionOf(name)
   if (ext === 'pdf') return 'pdf'
+  if (ext === 'docx') return 'docx'
   if (IMAGE_EXTENSIONS.has(ext)) return 'image'
   return 'markdown'
 }
@@ -52,6 +53,7 @@ export function viewerKindForFileName(name: string): DocumentViewerKind {
 /** Visible kind. Other files reuse the markdown viewer without calling them Markdown. */
 export function openedViewerLabel(name: string, kind: DocumentViewerKind): string {
   if (kind === 'pdf') return 'PDF'
+  if (kind === 'docx') return 'Word document'
   if (kind === 'image') return 'Image'
   const ext = extensionOf(name)
   if (ext === 'md' || ext === 'markdown') return 'Markdown'

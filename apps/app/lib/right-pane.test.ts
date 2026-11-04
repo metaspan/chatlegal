@@ -38,12 +38,14 @@ describe('right pane', () => {
     assert.equal(viewerKindForFileName('photo.PNG'), 'image')
     assert.equal(viewerKindForFileName('scan.jpeg'), 'image')
     assert.equal(viewerKindForFileName('Deed.PDF'), 'pdf')
+    assert.equal(viewerKindForFileName('letter.DOCX'), 'docx')
     assert.equal(viewerKindForFileName('notes.txt'), 'markdown')
     assert.equal(viewerKindForFileName('bundle'), 'markdown')
 
     assert.equal(openedViewerLabel('letter.md', 'markdown'), 'Markdown')
     assert.equal(openedViewerLabel('photo.png', 'image'), 'Image')
     assert.equal(openedViewerLabel('notice.pdf', 'pdf'), 'PDF')
+    assert.equal(openedViewerLabel('letter.docx', 'docx'), 'Word document')
     assert.equal(openedViewerLabel('notes.txt', 'markdown'), 'File')
 
     const libraryFile = openRightPaneDocument({

@@ -1,7 +1,7 @@
 'use client'
 
 import type { CSSProperties } from 'react'
-import { Activity, Calendar, CircleDot, FileText, Image as ImageIcon, PanelRightClose, ScrollText, Users } from 'lucide-react'
+import { Activity, Calendar, CircleDot, File, FileText, Image as ImageIcon, PanelRightClose, ScrollText, Users } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatSidebarResizeHandle, useChatSidebarWidth } from '@/components/chat/chat-sidebar-resize'
@@ -18,6 +18,7 @@ const KIND_ICONS: Record<ViewerKind, LucideIcon> = {
   markdown: FileText,
   image: ImageIcon,
   pdf: ScrollText,
+  docx: File,
   'chat-state': Activity,
   parties: Users,
   dates: Calendar,

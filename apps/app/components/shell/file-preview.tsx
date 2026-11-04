@@ -10,6 +10,7 @@ import { isMarkdownFileName, workspaceContentPath, type OpenedDocument } from '@
  * apps/web/components/workspace/workspace-file-pane.tsx: nothing is fetched
  * until a file is selected, and preview is the resting mode. Editing stays out.
  * PDF uses the browser viewer. A picture uses an img. Markdown is text only.
+ * A Word document is not rendered. The pane offers a download of the stored bytes.
  */
 
 export type OpenedFileBody = {
@@ -87,6 +88,19 @@ export function FilePreview({
         data-viewer-image={document.name}
         className="max-h-[70vh] w-full rounded-md bg-card object-contain"
       />
+    )
+  }
+  if (document.kind === 'docx') {
+    const href = workspaceContentPath(document)
+    return (
+      <div className="flex max-w-prose flex-col gap-2" data-viewer-docx={document.name}>
+        <p className="text-sm text-muted-foreground">
+          This Word document is stored here. It is not shown on this page. Download it to open it on your computer.
+        </p>
+        <a href={href} download={document.name} className="text-sm text-link underline-offset-4 hover:underline">
+          Download {document.name}
+        </a>
+      </div>
     )
   }
   if (document.kind === 'pdf') {

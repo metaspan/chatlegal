@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { withProcessEnvLock } from '../process-env-lock.ts'
 import { createMatter, disconnectMatterStore, getMatterStore } from '../matters/store.ts'
-import { readMatterFile, readUserFile, writeMatterFile } from './store.ts'
+import { readMatterFile, readMatterFileBytes, readUserFile, writeMatterFile } from './store.ts'
 
 describe('workspace routes', () => {
   it('moves a file between the library and a matter, and hides another user', async () => {
@@ -118,6 +118,76 @@ describe('workspace routes', () => {
         )
         assert.equal(bad.status, 400)
         assert.equal(fs.existsSync(path.join(dir, 'workspace', 'escape.txt')), false)
+
+        const pdf = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34, 0x00, 0xff])
+        const uploadForm = new FormData()
+        uploadForm.append('file', new File([pdf], 'Council letter.PDF', { type: 'application/pdf' }))
+        const uploaded = await matterFiles.POST(
+          new Request('http://localhost/api/matters/' + own.id + '/files', { method: 'POST', body: uploadForm }),
+          { params: Promise.resolve({ matterId: own.id }) },
+        )
+        assert.equal(uploaded.status, 201)
+        const uploadedBody = (await uploaded.json()) as { file: { name: string; size: number } }
+        assert.equal(uploadedBody.file.name, 'Council-letter.PDF')
+        assert.equal(uploadedBody.file.size, pdf.length)
+        assert.deepEqual(await readMatterFileBytes('user_test', own.id, 'Council-letter.PDF'), pdf)
+
+        const afterUpload = await matterFiles.GET(new Request('http://localhost/api/matters/' + own.id + '/files'), {
+          params: Promise.resolve({ matterId: own.id }),
+        })
+        assert.deepEqual(
+          ((await afterUpload.json()) as { files: { name: string }[] }).files.map((file) => file.name),
+          ['Council-letter.PDF'],
+        )
+
+        const textForm = new FormData()
+        textForm.append('file', new File([Buffer.from('hello')], 'notes.txt', { type: 'text/plain' }))
+        const rejected = await matterFiles.POST(
+          new Request('http://localhost/api/matters/' + own.id + '/files', { method: 'POST', body: textForm }),
+          { params: Promise.resolve({ matterId: own.id }) },
+        )
+        assert.equal(rejected.status, 400)
+        const rejectedText = await rejected.text()
+        assert.match(rejectedText, /PDF, Word document, or Markdown/)
+        assert.equal(await readMatterFile('user_test', own.id, 'notes.txt'), null)
+
+        const emptyForm = new FormData()
+        emptyForm.append('file', new File([], 'empty.pdf', { type: 'application/pdf' }))
+        const empty = await matterFiles.POST(
+          new Request('http://localhost/api/matters/' + own.id + '/files', { method: 'POST', body: emptyForm }),
+          { params: Promise.resolve({ matterId: own.id }) },
+        )
+        assert.equal(empty.status, 400)
+        assert.match(await empty.text(), /empty/)
+
+        const again = new FormData()
+        again.append('file', new File([pdf], 'Council-letter.PDF', { type: 'application/pdf' }))
+        const conflict = await matterFiles.POST(
+          new Request('http://localhost/api/matters/' + own.id + '/files', { method: 'POST', body: again }),
+          { params: Promise.resolve({ matterId: own.id }) },
+        )
+        assert.equal(conflict.status, 409)
+
+        const stolenForm = new FormData()
+        stolenForm.append('file', new File([pdf], 'notice.pdf', { type: 'application/pdf' }))
+        const stolenUpload = await matterFiles.POST(
+          new Request('http://localhost/api/matters/' + other.id + '/files', { method: 'POST', body: stolenForm }),
+          { params: Promise.resolve({ matterId: other.id }) },
+        )
+        assert.equal(stolenUpload.status, 404)
+        assert.match(await stolenUpload.text(), /Matter not found/)
+        assert.equal(await readMatterFileBytes('user_b', other.id, 'notice.pdf'), null)
+        assert.equal(fs.existsSync(path.join(dir, 'workspace', 'notice.pdf')), false)
+
+        const docx = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0xff, 0xfe])
+        const docxForm = new FormData()
+        docxForm.append('file', new File([docx], 'reply.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }))
+        const docxUpload = await matterFiles.POST(
+          new Request('http://localhost/api/matters/' + own.id + '/files', { method: 'POST', body: docxForm }),
+          { params: Promise.resolve({ matterId: own.id }) },
+        )
+        assert.equal(docxUpload.status, 201)
+        assert.deepEqual(await readMatterFileBytes('user_test', own.id, 'reply.docx'), docx)
       } finally {
         await disconnectMatterStore()
         if (previousDb === undefined) delete process.env.CHATLEGAL_MATTERS_DB

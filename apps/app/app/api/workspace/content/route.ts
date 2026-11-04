@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { userOwnsMatter, getMatterStore } from '@/lib/matters/store'
 import { requireConsumerSession } from '@/lib/session-guards'
-import { workspaceContentType } from '@/lib/workspace/content'
+import { workspaceContentDisposition, workspaceContentType } from '@/lib/workspace/content'
 import { workspaceErrorResponse } from '@/lib/workspace/http'
 import { WorkspaceRequestError } from '@/lib/workspace/request'
 import { readMatterFileBytes, readUserFileBytes } from '@/lib/workspace/store'
@@ -31,7 +31,7 @@ function fileResponse(name: string, bytes: Buffer): NextResponse {
   const headers = new Headers({
     'content-type': type,
     'x-content-type-options': 'nosniff',
-    'content-disposition': `inline; filename="${name}"`,
+    'content-disposition': workspaceContentDisposition(name),
     'cache-control': 'no-store',
   })
   if (type.startsWith('image/svg')) {
