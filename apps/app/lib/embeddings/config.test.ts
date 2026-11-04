@@ -3,7 +3,14 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { EMBED_CHUNK_CHARS, EMBED_MAX_CHUNKS, chunkWorkspaceText, isIndexableFileName, isStoredBinaryName } from './chunk.ts'
+import {
+  EMBED_CHUNK_CHARS,
+  EMBED_MAX_CHUNKS,
+  chunkWorkspaceText,
+  isExtractableFileName,
+  isIndexableFileName,
+  isPlainTextFileName,
+} from './chunk.ts'
 import { embedBaseUrl, embeddingConfig, embeddingsEndpoint } from './config.ts'
 import { embeddingDatabaseFile } from './paths.ts'
 
@@ -76,7 +83,7 @@ describe('embedding config', () => {
     assert.doesNotMatch(source, /mattersDatabaseUrl/)
   })
 
-  it('chunks text files and leaves PDF and Word unread', () => {
+  it('chunks text and treats PDF and Word as files search can read', () => {
     assert.deepEqual(chunkWorkspaceText('  Bring the agreement.  '), {
       chunks: ['Bring the agreement.'],
       truncated: false,
@@ -86,14 +93,20 @@ describe('embedding config', () => {
     const chunked = chunkWorkspaceText(long)
     assert.equal(chunked.chunks.length, EMBED_MAX_CHUNKS)
     assert.equal(chunked.truncated, true)
+    assert.equal(isPlainTextFileName('note.md'), true)
+    assert.equal(isPlainTextFileName('letter.txt'), true)
+    assert.equal(isPlainTextFileName('note.markdown'), true)
+    assert.equal(isPlainTextFileName('scan.pdf'), false)
+    assert.equal(isExtractableFileName('scan.pdf'), true)
+    assert.equal(isExtractableFileName('reply.DOCX'), true)
+    assert.equal(isExtractableFileName('note.md'), false)
     assert.equal(isIndexableFileName('note.md'), true)
-    assert.equal(isIndexableFileName('letter.txt'), true)
-    assert.equal(isIndexableFileName('note.markdown'), true)
-    assert.equal(isStoredBinaryName('scan.pdf'), true)
-    assert.equal(isStoredBinaryName('reply.docx'), true)
-    assert.equal(isIndexableFileName('scan.pdf'), false)
+    assert.equal(isIndexableFileName('scan.PDF'), true)
+    assert.equal(isIndexableFileName('reply.docx'), true)
+    assert.equal(isIndexableFileName('photo.png'), false)
     const source = fs.readFileSync(new URL('./chunk.ts', import.meta.url), 'utf8')
-    assert.match(source, /TODO\(D-03 extract\)/)
+    assert.match(source, /no text layer/)
+    assert.doesNotMatch(source, /TODO\(D-03 extract\)/)
   })
 
   it('does not wire chat, Concierge, or the matters database', () => {

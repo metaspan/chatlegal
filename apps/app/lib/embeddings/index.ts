@@ -1,19 +1,27 @@
 import { getMatterStore, userOwnsMatter, type MatterStore } from '../matters/store'
 import { isSafeWorkspaceId, workspaceFileName } from '../workspace/paths'
-import { listMatterFiles, listUserFiles, readMatterFile, readUserFile } from '../workspace/store'
+import {
+  listMatterFiles,
+  listUserFiles,
+  readMatterFile,
+  readMatterFileBytes,
+  readUserFile,
+  readUserFileBytes,
+} from '../workspace/store'
 import type { WorkspaceFile, WorkspaceScope } from '../workspace/types'
-import { chunkWorkspaceText, isIndexableFileName, isStoredBinaryName, searchExcerpt } from './chunk'
+import { chunkWorkspaceText, isExtractableFileName, isPlainTextFileName, searchExcerpt } from './chunk'
 import { embeddingConfig, type EmbeddingConfig } from './config'
 import { embedInBatches, httpEmbedder, type EmbedTexts } from './embed'
+import { extractIndexText } from './extract'
 import { IndexedFileMissingError } from './errors'
 import {
-  FILE_SEARCH_BINARY,
   FILE_SEARCH_CAP,
   FILE_SEARCH_EMPTY,
   FILE_SEARCH_EMPTY_FILE,
   FILE_SEARCH_FILE_CAP,
   FILE_SEARCH_LONG,
   FILE_SEARCH_NOT_TEXT,
+  FILE_SEARCH_UNREADABLE,
   FILE_SEARCH_NO_MATCH,
   FILE_SEARCH_OFF,
   FILE_SEARCH_PREPARED,
@@ -26,7 +34,8 @@ import { indexHasRows, queryFileChunks, scopeMetadata, writeFileChunks, type Chu
  * Library and matter each have their own vector file. Another user's file
  * is never opened. Chat does not call this. TODO(D-04).
  *
- * TODO(D-03 extract): PDF and Word stay as uploaded bytes.
+ * PDF and Word (.docx) are read as plain text when search is on.
+ * A scanned PDF is skipped. There is no OCR. The original bytes stay stored.
  * TODO(G-00): Concierge and TaskRunner stay off.
  */
 
@@ -94,6 +103,17 @@ async function textIn(
   return readMatterFile(userId, scope.matterId, name, storeOptions)
 }
 
+async function bytesIn(
+  userId: string,
+  scope: WorkspaceScope,
+  name: string,
+  options?: IndexOptions,
+): Promise<Buffer | null> {
+  const storeOptions = { env: envOf(options), matters: options?.matters }
+  if (scope.kind === 'user') return readUserFileBytes(userId, name, storeOptions)
+  return readMatterFileBytes(userId, scope.matterId, name, storeOptions)
+}
+
 function embedderFor(config: EmbeddingConfig, options?: IndexOptions): EmbedTexts {
   if (options?.embed) return options.embed
   return httpEmbedder(config, options?.fetch)
@@ -127,7 +147,7 @@ export async function searchWorkspace(
   }
 }
 
-/** Read text files in this library or matter and store their vectors. */
+/** Read text, Markdown, PDF, and Word files in this library or matter and store their vectors. */
 export async function prepareWorkspace(
   userId: string,
   scope: WorkspaceScope,
@@ -150,20 +170,12 @@ export async function prepareWorkspace(
   const skipped: WorkspaceIndexBody['skipped'] = overflow.map((file) => ({ name: file.name, reason: FILE_SEARCH_CAP }))
   const pending: { name: string; chunks: string[]; truncated: boolean }[] = []
   for (const file of capped) {
-    if (isStoredBinaryName(file.name)) {
-      skipped.push({ name: file.name, reason: FILE_SEARCH_BINARY })
+    const read = await textForIndex(userId, scope, file.name, options)
+    if (read.kind === 'skip') {
+      skipped.push({ name: file.name, reason: read.reason })
       continue
     }
-    if (!isIndexableFileName(file.name)) {
-      skipped.push({ name: file.name, reason: FILE_SEARCH_NOT_TEXT })
-      continue
-    }
-    const text = await textIn(userId, scope, file.name, options)
-    if (text === null) {
-      skipped.push({ name: file.name, reason: 'File not found.' })
-      continue
-    }
-    const chunked = chunkWorkspaceText(text)
+    const chunked = chunkWorkspaceText(read.text)
     if (chunked.chunks.length === 0) {
       skipped.push({ name: file.name, reason: FILE_SEARCH_EMPTY_FILE })
       continue
@@ -210,10 +222,36 @@ export async function prepareWorkspace(
   }
 }
 
+type IndexedText = { kind: 'text'; text: string } | { kind: 'skip'; reason: string }
+
+/**
+ * Plain text for one file.
+ * PDF and Word are extracted. Markdown and text are read as stored.
+ * A missing or unreadable file is not sent to the embeddings endpoint.
+ */
+async function textForIndex(
+  userId: string,
+  scope: WorkspaceScope,
+  name: string,
+  options?: IndexOptions,
+): Promise<IndexedText> {
+  if (isExtractableFileName(name)) {
+    const bytes = await bytesIn(userId, scope, name, options)
+    if (!bytes) return { kind: 'skip', reason: 'File not found.' }
+    const extracted = await extractIndexText(name, bytes)
+    if (!extracted.ok) return { kind: 'skip', reason: FILE_SEARCH_UNREADABLE }
+    return { kind: 'text', text: extracted.text }
+  }
+  if (!isPlainTextFileName(name)) return { kind: 'skip', reason: FILE_SEARCH_NOT_TEXT }
+  const text = await textIn(userId, scope, name, options)
+  if (text === null) return { kind: 'skip', reason: 'File not found.' }
+  return { kind: 'text', text }
+}
+
 function preparedMessage(indexed: boolean, skipped: WorkspaceIndexBody['skipped']): string {
   if (!indexed) return skipped[0]?.reason ?? FILE_SEARCH_EMPTY
-  if (skipped.some((item) => item.reason === FILE_SEARCH_BINARY)) {
-    return `${FILE_SEARCH_PREPARED} ${FILE_SEARCH_BINARY}`
+  if (skipped.some((item) => item.reason === FILE_SEARCH_UNREADABLE)) {
+    return `${FILE_SEARCH_PREPARED} ${FILE_SEARCH_UNREADABLE}`
   }
   if (skipped.some((item) => item.reason === FILE_SEARCH_LONG)) {
     return `${FILE_SEARCH_PREPARED} ${FILE_SEARCH_LONG}`
