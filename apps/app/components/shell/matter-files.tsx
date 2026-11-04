@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, type ChangeEvent } from 'react'
+import Link from 'next/link'
 import { useActiveMatterId } from '@/components/shell/active-matter'
 import { useRightPaneActions } from '@/components/shell/right-pane-actions'
 import { useLibrary } from '@/components/shell/use-library'
@@ -19,14 +20,27 @@ import {
  * Open uses the same right-pane request as the library.
  * The list stays names and sizes. The file body opens in the viewer.
  * Upload accepts a PDF, Word document, or Markdown file, up to 10 MB.
+ * A library file can be copied onto this matter. The library copy stays.
+ * Move to library takes a matter file off this matter.
  */
-export function MatterFiles({ files }: { files?: readonly WorkspaceFile[] }) {
+export function MatterFiles({
+  files,
+  libraryFiles,
+}: {
+  files?: readonly WorkspaceFile[]
+  /** Tests pass the library list. The page leaves this unset and loads it. */
+  libraryFiles?: readonly WorkspaceFile[]
+}) {
   const matterId = useActiveMatterId()
-  const library = useLibrary(files ? null : matterId)
+  const live = files === undefined
+  const library = useLibrary(live ? matterId : null)
   const rightPane = useRightPaneActions()
   const [uploadError, setUploadError] = useState<string | null>(null)
   const listed = files ?? library.matterFiles
-  const loading = files === undefined && Boolean(matterId) && !library.matterLoaded
+  const loading = live && Boolean(matterId) && !library.matterLoaded
+  const showLibrary = Boolean(matterId) && (libraryFiles !== undefined || live)
+  const libraryList = libraryFiles ?? library.files
+  const libraryLoading = showLibrary && libraryFiles === undefined && !library.loaded
 
   function onPick(event: ChangeEvent<HTMLInputElement>) {
     const picked = event.target.files?.[0]
@@ -77,9 +91,14 @@ export function MatterFiles({ files }: { files?: readonly WorkspaceFile[] }) {
           {uploadError}
         </p>
       ) : null}
-      {library.matterError && files === undefined ? (
+      {library.matterError && live ? (
         <p role="alert" className="text-sm text-muted-foreground">
           {library.matterError}
+        </p>
+      ) : null}
+      {library.error && live ? (
+        <p role="alert" className="text-sm text-muted-foreground">
+          {library.error}
         </p>
       ) : null}
       {loading ? <p className="text-sm text-muted-foreground">Loading files…</p> : null}
@@ -91,18 +110,69 @@ export function MatterFiles({ files }: { files?: readonly WorkspaceFile[] }) {
           {listed.map((file) => (
             <li key={file.name} className="flex items-center justify-between gap-2" data-matter-file={file.name}>
               <span className="truncate text-sm">{file.name}</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                aria-label={`Open ${file.name}`}
-                onClick={() => rightPane?.openDocument({ name: file.name, scope: 'matter' })}
-              >
-                Open
-              </Button>
+              <div className="flex shrink-0 items-center gap-1">
+                {matterId ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Move ${file.name} to library`}
+                    disabled={library.movingName === file.name}
+                    onClick={() => void library.moveToLibrary(file.name)}
+                  >
+                    {library.movingName === file.name && library.movingMode === 'move' ? 'Moving…' : 'Move to library'}
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-label={`Open ${file.name}`}
+                  onClick={() => rightPane?.openDocument({ name: file.name, scope: 'matter' })}
+                >
+                  Open
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
+      ) : null}
+      {matterId && listed.length > 0 ? (
+        <p className="text-xs text-muted-foreground">Move takes the file off this matter and puts it in your library.</p>
+      ) : null}
+      {showLibrary ? (
+        <div className="flex flex-col gap-2 border-t pt-3" data-library-attach>
+          <h2 className="text-sm font-semibold">From your library</h2>
+          <p className="text-xs text-muted-foreground">Add a file you already keep. The library copy stays.</p>
+          {libraryLoading ? <p className="text-sm text-muted-foreground">Loading library…</p> : null}
+          {!libraryLoading && libraryList.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No files in your library yet.{' '}
+              <Link href="/library" className="text-link underline-offset-4 hover:underline">
+                Open library
+              </Link>
+            </p>
+          ) : null}
+          {libraryList.length > 0 ? (
+            <ul className="flex flex-col gap-2" aria-label="Library files to add">
+              {libraryList.map((file) => (
+                <li key={file.name} className="flex items-center justify-between gap-2" data-attach-file={file.name}>
+                  <span className="truncate text-sm">{file.name}</span>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    aria-label={`Add ${file.name} to this matter`}
+                    disabled={library.movingName === file.name}
+                    onClick={() => void library.attachToMatter(file.name)}
+                  >
+                    {library.movingName === file.name && library.movingMode === 'copy' ? 'Adding…' : 'Add to this matter'}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       ) : null}
     </div>
   )
