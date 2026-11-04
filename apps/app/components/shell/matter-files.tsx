@@ -3,6 +3,7 @@
 import { useState, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { useActiveMatterId } from '@/components/shell/active-matter'
+import { FileSearch } from '@/components/shell/file-search'
 import { useRightPaneActions } from '@/components/shell/right-pane-actions'
 import { useLibrary } from '@/components/shell/use-library'
 import { Button } from '@/components/ui/button'
@@ -61,12 +62,21 @@ export function MatterFiles({
   }
 
   if (files === undefined && !matterId) {
-    return <p className="text-sm text-muted-foreground">Open a chat to see files stored with it.</p>
+    return (
+      <div className="flex flex-col gap-2">
+        <p className="text-sm text-muted-foreground">Open a chat to see files stored with it.</p>
+        <FileSearch href={null} resolved />
+      </div>
+    )
   }
 
   return (
     <div className="flex flex-col gap-2" data-matter-workspace>
       <h2 className="text-sm font-semibold">Files on this matter</h2>
+      <FileSearch
+        href={matterId ? `/api/matters/${encodeURIComponent(matterId)}/index` : null}
+        resolved={!matterId}
+      />
       {matterId ? (
         <div className="flex flex-col gap-1" data-matter-upload>
           <Label htmlFor="matter-file-upload">Upload a file</Label>

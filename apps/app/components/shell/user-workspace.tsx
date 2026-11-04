@@ -3,11 +3,13 @@
 import { useState, type FormEvent } from 'react'
 import { File, FileCode, FileJson, FileText, Search } from 'lucide-react'
 import { useActiveMatterId } from '@/components/shell/active-matter'
+import { FileSearch } from '@/components/shell/file-search'
 import { useRightPaneActions } from '@/components/shell/right-pane-actions'
 import { useLibrary } from '@/components/shell/use-library'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { FILE_SEARCH_OFF } from '@/lib/embeddings/messages'
 import type { WorkspaceFile } from '@/lib/workspace/types'
 import { cn } from '@/lib/utils'
 
@@ -54,12 +56,19 @@ export function UserWorkspace({
   initialError = null,
   initialSelectedName = null,
   onOpenFile,
+  fileSearchEnabled = false,
+  fileSearchNote = FILE_SEARCH_OFF,
+  fileSearchResolved = false,
 }: {
   initialFiles: readonly WorkspaceFile[]
   initialError?: string | null
   /** Tests select a row without a click. The page leaves this unset. */
   initialSelectedName?: string | null
   onOpenFile?: (file: { name: string; scope: 'user' }) => void
+  /** The library page reads GET /api/library/index. Tests can leave these unset. */
+  fileSearchEnabled?: boolean
+  fileSearchNote?: string
+  fileSearchResolved?: boolean
 }) {
   const matterId = useActiveMatterId()
   const library = useLibrary(matterId, { files: initialFiles, error: initialError })
@@ -88,6 +97,12 @@ export function UserWorkspace({
         <h1 className="font-serif text-2xl font-semibold tracking-tight">Library</h1>
         <p className="text-sm text-muted-foreground">Files stored for your account.</p>
       </div>
+      <FileSearch
+        href="/api/library/index"
+        resolved={fileSearchResolved}
+        initialEnabled={fileSearchEnabled}
+        initialNote={fileSearchNote ?? FILE_SEARCH_OFF}
+      />
       <div className="grid items-start gap-4 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-2">
           <div className="relative">
