@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import fs from 'node:fs'
+import path from 'node:path'
 import { FileExistsError, FileNotFoundError, LocalFilesystem, Workspace } from '@mastra/core/workspace'
 import { getMatterStore, userOwnsMatter, type MatterStore } from '../matters/store'
 import {
@@ -86,16 +87,28 @@ async function listAt(basePath: string): Promise<WorkspaceFile[]> {
 }
 
 async function readAt(basePath: string, name: string): Promise<string | null> {
+  const bytes = await readBytesAt(basePath, name)
+  return bytes ? bytes.toString('utf8') : null
+}
+
+/**
+ * Original bytes for the viewer. A symlink is refused.
+ * The name check is the same single-segment rule as a text read.
+ */
+async function readBytesAt(basePath: string, name: string): Promise<Buffer | null> {
   const safe = workspaceFileName(name)
-  return withFilesystem(basePath, async (disk) => {
-    try {
-      const content = await disk.readFile(safe, { encoding: 'utf8' })
-      return typeof content === 'string' ? content : Buffer.from(content).toString('utf8')
-    } catch (error) {
-      if (error instanceof FileNotFoundError) return null
-      throw error
-    }
-  })
+  const root = path.resolve(basePath)
+  const full = path.resolve(root, safe)
+  if (full !== path.join(root, safe)) throw new WorkspacePathError('Path escapes the workspace root.')
+  try {
+    const stat = await fs.promises.lstat(full)
+    if (stat.isSymbolicLink() || !stat.isFile()) return null
+    return await fs.promises.readFile(full)
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code
+    if (code === 'ENOENT' || code === 'ENOTDIR') return null
+    throw error
+  }
 }
 
 async function writeAt(basePath: string, name: string, text: string): Promise<WorkspaceFile> {
@@ -162,6 +175,14 @@ export async function readUserFile(
   return readAt(userLibraryDir(userId, envOf(options)), name)
 }
 
+export async function readUserFileBytes(
+  userId: string,
+  name: string,
+  options?: WorkspaceStoreOptions,
+): Promise<Buffer | null> {
+  return readBytesAt(userLibraryDir(userId, envOf(options)), name)
+}
+
 export async function writeUserFile(
   userId: string,
   name: string,
@@ -195,6 +216,18 @@ export async function readMatterFile(
   const base = await matterBase(userId, matterId, options)
   if (!base) return null
   return readAt(base, name)
+}
+
+/** Null when the matter is not theirs or the file is not there. */
+export async function readMatterFileBytes(
+  userId: string,
+  matterId: string,
+  name: string,
+  options?: WorkspaceStoreOptions,
+): Promise<Buffer | null> {
+  const base = await matterBase(userId, matterId, options)
+  if (!base) return null
+  return readBytesAt(base, name)
 }
 
 export async function writeMatterFile(

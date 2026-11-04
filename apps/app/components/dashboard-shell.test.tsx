@@ -19,10 +19,12 @@ import {
   defaultRightPaneView,
   dismissRightPaneDocument,
   openRightPaneDocument,
+  openRightPaneMatterView,
   rightPaneKind,
   type RightPaneView,
 } from '../lib/right-pane.ts'
-import type { MatterObservations } from '../lib/matters/types.ts'
+import type { MatterMessage, MatterObservations } from '../lib/matters/types.ts'
+import type { OpenedFileBody } from './shell/file-preview.tsx'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 
@@ -102,12 +104,15 @@ describe('dashboard shell', () => {
     assert.match(viewer, /Resize viewer/)
     assert.match(viewer, /--viewer-pane-width:448px/)
     assert.match(viewer, /data-viewer-kind="chat-state"/)
+    assert.match(viewer, /data-viewer-switch="chat-state"/)
+    assert.match(viewer, /aria-pressed="true"/)
     assert.match(viewer, /Chat state/)
     assert.match(viewer, /aria-label="Summary"/)
     assert.match(viewer, /data-observation-matter-id="matter-1"/)
     assert.match(viewer, /The deposit deadline is Friday\./)
     assert.doesNotMatch(viewer, /No document is open/)
     assert.doesNotMatch(viewer, /This file is open in the viewer/)
+    assert.doesNotMatch(viewer, /data-view-stub/)
     assert.doesNotMatch(viewer, /role="tablist"/)
     assert.doesNotMatch(viewer, /data-open-document="[^"]+"/)
 
@@ -118,22 +123,87 @@ describe('dashboard shell', () => {
     assert.match(opened, /data-open-document="notice.pdf"/)
     assert.match(opened, /notice\.pdf/)
     assert.match(opened, />\s*PDF\s*</)
-    assert.match(opened, /This file is open in the viewer/)
+    assert.match(opened, /data-viewer-pdf="notice.pdf"/)
+    assert.match(opened, /<iframe/)
+    assert.match(opened, /\/api\/workspace\/content\?name=notice\.pdf&amp;scope=user/)
     assert.match(opened, /aria-label="Close document"/)
     assert.doesNotMatch(opened, /The deposit deadline is Friday/)
     assert.doesNotMatch(opened, /No document is open/)
+    assert.doesNotMatch(opened, /This file is open in the viewer/)
     assert.doesNotMatch(opened, /role="tablist"/)
 
-    const markdown = renderViewer(openRightPaneDocument({ name: 'letter.md', scope: 'user' }))
+    const markdown = renderViewer(openRightPaneDocument({ name: 'letter.md', scope: 'user' }), {
+      fileBody: {
+        status: 'ready',
+        text: '# Deposit\n\nBring the <script>alert(1)</script> agreement.\n\nSee [gov.uk](https://www.gov.uk/deposit) and [bad](javascript:alert(1)).',
+      },
+    })
     assert.match(markdown, /data-viewer-kind="markdown"/)
     assert.match(markdown, />\s*Markdown\s*</)
-    const image = renderViewer(openRightPaneDocument({ name: 'photo.png', scope: 'user' }))
+    assert.match(markdown, /data-markdown-preview/)
+    assert.match(markdown, /<h1[^>]*>Deposit<\/h1>/)
+    assert.match(markdown, /Bring the/)
+    assert.match(markdown, /href="https:\/\/www\.gov\.uk\/deposit"/)
+    assert.doesNotMatch(markdown, /<script>/)
+    assert.doesNotMatch(markdown, /javascript:/)
+    assert.doesNotMatch(markdown, /The deposit deadline is Friday/)
+    const image = renderViewer(openRightPaneDocument({ name: 'photo.png', scope: 'matter', matterId: 'matter-1' }))
     assert.match(image, /data-viewer-kind="image"/)
     assert.match(image, />\s*Image\s*</)
-    const other = renderViewer(openRightPaneDocument({ name: 'notes.txt', scope: 'user' }))
+    assert.match(image, /<img/)
+    assert.match(image, /alt="photo.png"/)
+    assert.match(image, /data-viewer-image="photo.png"/)
+    assert.match(image, /\/api\/workspace\/content\?name=photo\.png&amp;scope=matter&amp;matterId=matter-1/)
+    const other = renderViewer(openRightPaneDocument({ name: 'notes.txt', scope: 'user' }), {
+      fileBody: { status: 'ready', text: 'Bring the agreement.' },
+    })
     assert.match(other, /data-viewer-kind="markdown"/)
     assert.match(other, />\s*File\s*</)
+    assert.match(other, /data-viewer-text/)
+    assert.match(other, /Bring the agreement\./)
     assert.doesNotMatch(other, />\s*Markdown\s*</)
+    assert.doesNotMatch(other, /data-markdown-preview/)
+
+    const people = renderViewer(openRightPaneMatterView('parties'))
+    assert.equal(rightPaneKind(openRightPaneMatterView('parties')), 'parties')
+    assert.match(people, /data-viewer-kind="parties"/)
+    assert.match(people, /aria-label="People"/)
+    assert.match(people, /data-view-stub="parties"/)
+    assert.match(people, /Stub\. Names and addresses are not on this matter yet\./)
+    assert.doesNotMatch(people, /The deposit deadline is Friday/)
+    assert.doesNotMatch(people, /claimant|defendant|solicitor/i)
+    assert.doesNotMatch(people, /aria-label="Close document"/)
+
+    const dates = renderViewer(openRightPaneMatterView('dates'), {
+      matter: {
+        id: 'matter-1',
+        title: 'Deposit',
+        createdAt: '2026-11-03T00:00:00.000Z',
+        updatedAt: '2026-11-03T18:30:00.000Z',
+      },
+      messages: [
+        { id: 'msg-1', role: 'user', text: 'When is the deadline?', createdAt: '2026-11-03T00:00:00.000Z' },
+      ],
+    })
+    assert.match(dates, /data-viewer-kind="dates"/)
+    assert.match(dates, /data-matter-fact="opened"/)
+    assert.match(dates, /3 Nov 2026/)
+    assert.match(dates, /You wrote/)
+    assert.match(dates, /data-view-stub="dates"/)
+    assert.match(dates, /Dates taken from letters are not stored yet/)
+    assert.doesNotMatch(dates, /The deposit deadline is Friday/)
+
+    const standing = renderViewer(openRightPaneMatterView('status'), {
+      messages: [
+        { id: 'msg-1', role: 'user', text: 'When is the deadline?', createdAt: '2026-11-03T00:00:00.000Z' },
+      ],
+    })
+    assert.match(standing, /data-viewer-kind="status"/)
+    assert.match(standing, /This chat is open/)
+    assert.match(standing, /1 note in this chat/)
+    assert.match(standing, /A summary is saved for this chat/)
+    assert.match(standing, /data-view-stub="status"/)
+    assert.doesNotMatch(standing, /The deposit deadline is Friday/)
 
     pane = dismissRightPaneDocument()
     assert.equal(rightPaneKind(pane), 'chat-state')
@@ -142,8 +212,10 @@ describe('dashboard shell', () => {
     assert.match(restored, /data-viewer-kind="chat-state"/)
     assert.match(restored, /The deposit deadline is Friday\./)
     assert.doesNotMatch(restored, /notice\.pdf/)
+    assert.doesNotMatch(restored, /data-markdown-preview/)
     assert.doesNotMatch(restored, /This file is open in the viewer/)
     assert.doesNotMatch(restored, /aria-label="Close document"/)
+    assert.doesNotMatch(restored, /data-view-stub/)
 
     const emptySummary = renderViewer(defaultRightPaneView(), {
       matterId: 'matter-2',
@@ -335,8 +407,11 @@ describe('dashboard shell', () => {
     assert.match(shell, /RightPaneActionsProvider/)
     assert.match(shell, /defaultRightPaneView/)
     assert.match(shell, /openRightPaneDocument/)
+    assert.match(shell, /openRightPaneMatterView/)
+    assert.match(shell, /onSelectView=\{selectView\}/)
     assert.match(shell, /dismissRightPaneDocument/)
     assert.match(shell, /retainOpenedDocument/)
+    assert.match(shell, /ActiveMatterProvider/)
     assert.match(shell, /document=\{rightPane\.document\}/)
     assert.match(shell, /onDismiss=\{dismissDocument\}/)
     assert.doesNotMatch(shell, /initialKind|useLibrary|onAddFile|onMoveToMatter/)
@@ -474,16 +549,27 @@ function historyProps() {
 
 function renderViewer(
   view: RightPaneView,
-  options: { matterId?: string; observations?: MatterObservations } = {},
+  options: {
+    matterId?: string
+    observations?: MatterObservations
+    matter?: { id: string; title: string; createdAt: string; updatedAt: string } | null
+    messages?: MatterMessage[]
+    fileBody?: OpenedFileBody
+  } = {},
 ) {
   return renderToStaticMarkup(
     createElement(DocumentViewer, {
       onCollapse: () => {},
       onDismiss: () => {},
+      onSelectView: () => {},
       matterId: options.matterId ?? 'matter-1',
+      matter: options.matter ?? null,
+      messages: options.messages ?? [],
       threadStatus: 'ready',
       observations: options.observations ?? { enabled: true, summary: 'The deposit deadline is Friday.' },
+      viewMode: view.mode,
       document: view.document,
+      fileBody: options.fileBody,
     }),
   )
 }

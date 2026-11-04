@@ -16,6 +16,13 @@ export const DOCUMENT_VIEWER_KINDS = ['markdown', 'image', 'pdf'] as const
 
 export type DocumentViewerKind = (typeof DOCUMENT_VIEWER_KINDS)[number]
 
+/** People, dates, and status. Chat state stays the view when none of these is chosen. */
+export const MATTER_PANE_VIEWS = ['parties', 'dates', 'status'] as const
+
+export type MatterPaneView = (typeof MATTER_PANE_VIEWS)[number]
+
+export type RestingPaneView = 'chat-state' | MatterPaneView
+
 export type OpenedDocument = {
   name: string
   scope: 'user' | 'matter'
@@ -27,6 +34,7 @@ export type OpenedDocument = {
 export type RightPaneView =
   | { mode: 'chat-state'; document: null }
   | { mode: 'document'; document: OpenedDocument }
+  | { mode: MatterPaneView; document: null }
 
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'avif'])
 
@@ -74,6 +82,29 @@ export function dismissRightPaneDocument(): RightPaneView {
   return defaultRightPaneView()
 }
 
+export function isMatterPaneView(value: string): value is MatterPaneView {
+  return (MATTER_PANE_VIEWS as readonly string[]).includes(value)
+}
+
+/** People, dates, or status. Closing a file still uses dismissRightPaneDocument. */
+export function openRightPaneMatterView(mode: MatterPaneView): RightPaneView {
+  return { mode, document: null }
+}
+
+/** Same-origin read for an opened library or matter file. The session picks the user. */
+export function workspaceContentPath(document: Pick<OpenedDocument, 'name' | 'scope' | 'matterId'>): string {
+  const params = new URLSearchParams()
+  params.set('name', document.name)
+  params.set('scope', document.scope)
+  if (document.scope === 'matter' && document.matterId) params.set('matterId', document.matterId)
+  return `/api/workspace/content?${params.toString()}`
+}
+
+export function isMarkdownFileName(name: string): boolean {
+  const ext = extensionOf(name)
+  return ext === 'md' || ext === 'markdown'
+}
+
 /**
  * A matter file stays up only while that matter is open.
  * A library file is not tied to the matter.
@@ -86,7 +117,9 @@ export function retainOpenedDocument(view: RightPaneView, activeMatterId: string
 }
 
 export function rightPaneKind(view: RightPaneView): ViewerKind {
-  return view.mode === 'document' ? view.document.kind : 'chat-state'
+  if (view.mode === 'document') return view.document.kind
+  if (view.mode === 'chat-state') return 'chat-state'
+  return view.mode
 }
 
 function extensionOf(name: string): string {

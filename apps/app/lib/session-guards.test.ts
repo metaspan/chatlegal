@@ -83,6 +83,13 @@ describe('signed-in pages guard the session', () => {
     }
   })
 
+  it('workspace content checks the session and does not take a user id from the query', () => {
+    const source = fs.readFileSync(path.join(appDir, 'app/api/workspace/content/route.ts'), 'utf8')
+    assert.match(source, /requireConsumerSession/)
+    assert.match(source, /searchParams/)
+    assert.doesNotMatch(source, /userId=/)
+  })
+
   it('sign-in and sign-up pages do not require a session', () => {
     for (const rel of ['app/sign-in/[[...sign-in]]/page.tsx', 'app/sign-up/[[...sign-up]]/page.tsx']) {
       const source = fs.readFileSync(path.join(appDir, rel), 'utf8')

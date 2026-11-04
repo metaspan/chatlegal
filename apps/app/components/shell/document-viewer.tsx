@@ -1,14 +1,17 @@
 'use client'
 
 import type { CSSProperties } from 'react'
-import { Activity, FileText, Image as ImageIcon, PanelRightClose, ScrollText } from 'lucide-react'
+import { Activity, Calendar, CircleDot, FileText, Image as ImageIcon, PanelRightClose, ScrollText, Users } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatSidebarResizeHandle, useChatSidebarWidth } from '@/components/chat/chat-sidebar-resize'
+import { FilePreview, useOpenedFileText, type OpenedFileBody } from '@/components/shell/file-preview'
+import { MatterPaneViews } from '@/components/shell/matter-pane-views'
 import { MatterSummary } from '@/components/shell/matter-summary'
-import { openedViewerLabel, type OpenedDocument } from '@/lib/right-pane'
+import type { MatterViewMatter } from '@/lib/matters/matter-views'
+import type { MatterMessage, MatterObservations, MatterThreadStatus } from '@/lib/matters/types'
+import { openedViewerLabel, type MatterPaneView, type OpenedDocument, type RestingPaneView } from '@/lib/right-pane'
 import type { ViewerKind } from '@/lib/viewer-kind'
-import type { MatterObservations, MatterThreadStatus } from '@/lib/matters/types'
 import { cn } from '@/lib/utils'
 
 const KIND_ICONS: Record<ViewerKind, LucideIcon> = {
@@ -16,36 +19,66 @@ const KIND_ICONS: Record<ViewerKind, LucideIcon> = {
   image: ImageIcon,
   pdf: ScrollText,
   'chat-state': Activity,
+  parties: Users,
+  dates: Calendar,
+  status: CircleDot,
 }
+
+const VIEW_SWITCH: { mode: RestingPaneView; label: string }[] = [
+  { mode: 'chat-state', label: 'Summary' },
+  { mode: 'parties', label: 'People' },
+  { mode: 'dates', label: 'Dates' },
+  { mode: 'status', label: 'Status' },
+]
 
 /**
  * Right pane. Width drag is the docked-sidebar handle from
  * dcolley/tourbillon@7a8595b apps/web/components/chat/chat-sidebar-resize.tsx.
- * Resting content is chat state (the open matter's summary). A Markdown,
- * image, PDF, or other file viewer renders only after one is opened, the
- * same rule as workspace-file-pane.tsx in that pin: no path, no file body.
- * Closing the file returns to chat state. The file text is not shown here.
+ * Resting content is chat state. A file renders only after Open, the same
+ * rule as workspace-file-pane.tsx in that pin. Close returns to chat state.
+ * People, dates, and status are further views in this pane.
  */
 export function DocumentViewer({
   onCollapse,
   onDismiss,
+  onSelectView,
   matterId = null,
   threadStatus = 'idle',
   observations = null,
+  matter = null,
+  messages = [],
   document = null,
+  viewMode = 'chat-state',
+  fileBody,
 }: {
   onCollapse: () => void
   onDismiss: () => void
+  onSelectView?: (mode: RestingPaneView) => void
   matterId?: string | null
   threadStatus?: MatterThreadStatus
   observations?: MatterObservations | null
-  /** Set only after an explicit open. Null is chat state. */
+  matter?: MatterViewMatter | null
+  messages?: readonly MatterMessage[]
+  /** Set only after an explicit open. Null is not a file. */
   document?: OpenedDocument | null
+  viewMode?: RestingPaneView | 'document'
+  /** Tests pass the file text. The pane loads it when this is omitted. */
+  fileBody?: OpenedFileBody
 }) {
   const { width, dragging, onResizePointerDown, onResizeKeyDown } = useChatSidebarWidth()
-  const kind: ViewerKind = document ? document.kind : 'chat-state'
+  const opened = useOpenedFileText(document, fileBody)
+  const resting: RestingPaneView = !document && viewMode !== 'document' ? viewMode : 'chat-state'
+  const kind: ViewerKind = document ? document.kind : resting
   const Icon = KIND_ICONS[kind]
-  const heading = document ? document.name : 'Chat state'
+  const heading = document
+    ? document.name
+    : resting === 'parties'
+      ? 'People'
+      : resting === 'dates'
+        ? 'Dates'
+        : resting === 'status'
+          ? 'Status'
+          : 'Chat state'
 
   return (
     <aside
@@ -81,20 +114,48 @@ export function DocumentViewer({
           <PanelRightClose />
         </Button>
       </header>
+      <div role="group" aria-label="Viewer views" className="flex flex-wrap gap-1 border-b px-3 py-2">
+        {VIEW_SWITCH.map((item) => {
+          const active = !document && resting === item.mode
+          return (
+            <Button
+              key={item.mode}
+              type="button"
+              size="xs"
+              variant={active ? 'secondary' : 'ghost'}
+              data-viewer-switch={item.mode}
+              aria-pressed={active}
+              onClick={() => onSelectView?.(item.mode)}
+            >
+              {item.label}
+            </Button>
+          )
+        })}
+      </div>
       <div id="viewer-panel" aria-labelledby="viewer-heading" className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
-        <div className="flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-          <Icon className="size-5" />
-        </div>
         {document ? (
           <>
             <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               {openedViewerLabel(document.name, document.kind)}
             </p>
-            <h3 className="font-serif text-lg font-semibold break-words">{document.name}</h3>
-            <p className="text-sm text-muted-foreground">This file is open in the viewer.</p>
+            <FilePreview document={document} loading={opened.loading} body={opened.body} />
+          </>
+        ) : resting === 'chat-state' ? (
+          <>
+            <div className="flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+              <Icon className="size-5" />
+            </div>
+            <MatterSummary matterId={matterId} status={threadStatus} observations={observations} />
           </>
         ) : (
-          <MatterSummary matterId={matterId} status={threadStatus} observations={observations} />
+          <MatterPaneViews
+            mode={resting}
+            matterId={matterId}
+            matter={matter}
+            messages={messages}
+            threadStatus={threadStatus}
+            observations={observations}
+          />
         )}
       </div>
     </aside>

@@ -1,11 +1,12 @@
 /**
  * Right-pane viewer kinds.
  * Chat state is the resting view. Markdown, image, and PDF are shown only
- * after a file is opened (see lib/right-pane.ts). Each document kind stays
- * a stub: the file text is not rendered here.
+ * after a file is opened (see lib/right-pane.ts). People, dates, and status
+ * are other views in the same pane. People stay a labelled stub until a
+ * matter stores them. Dates and status read the open matter.
  */
 
-export const VIEWER_KINDS = ['markdown', 'image', 'pdf', 'chat-state'] as const
+export const VIEWER_KINDS = ['markdown', 'image', 'pdf', 'chat-state', 'parties', 'dates', 'status'] as const
 
 export type ViewerKind = (typeof VIEWER_KINDS)[number]
 
@@ -14,24 +15,39 @@ export const VIEWER_KIND_LABELS: Record<ViewerKind, string> = {
   image: 'Image',
   pdf: 'PDF',
   'chat-state': 'Chat state',
+  parties: 'People',
+  dates: 'Dates',
+  status: 'Status',
 }
 
 const VIEWER_COPY: Record<ViewerKind, { heading: string; body: string }> = {
   markdown: {
     heading: 'Markdown',
-    body: 'No document is open. A Markdown file will show here.',
+    body: 'A Markdown file shows here when you open one.',
   },
   image: {
     heading: 'Image',
-    body: 'No image is open. A picture will show here.',
+    body: 'A picture shows here when you open one.',
   },
   pdf: {
     heading: 'PDF',
-    body: 'No PDF is open. A PDF will show here.',
+    body: 'A PDF shows here when you open one.',
   },
   'chat-state': {
     heading: 'Summary',
     body: 'No matter is open. Open a chat to see its summary.',
+  },
+  parties: {
+    heading: 'People',
+    body: 'People in this matter are not stored yet.',
+  },
+  dates: {
+    heading: 'Dates',
+    body: 'Dates on this matter come from the chat.',
+  },
+  status: {
+    heading: 'Status',
+    body: 'Where this chat stands.',
   },
 }
 

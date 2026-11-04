@@ -8,6 +8,7 @@ import { AppBar } from '@/components/shell/app-bar'
 import { DocumentViewer } from '@/components/shell/document-viewer'
 import { HistoryPane } from '@/components/shell/history-pane'
 import { PaneEdgeToggle } from '@/components/shell/pane-edge-toggle'
+import { ActiveMatterProvider } from '@/components/shell/active-matter'
 import { RightPaneActionsProvider, type RightPaneOpenRequest } from '@/components/shell/right-pane-actions'
 import { useMatterSessions } from '@/components/shell/use-matter-sessions'
 import { usePaneOpen } from '@/components/shell/use-pane-open'
@@ -17,7 +18,9 @@ import {
   defaultRightPaneView,
   dismissRightPaneDocument,
   openRightPaneDocument,
+  openRightPaneMatterView,
   retainOpenedDocument,
+  type RestingPaneView,
   type RightPaneView,
 } from '@/lib/right-pane'
 import { SHELL_LEFT_OPEN_KEY, SHELL_RIGHT_OPEN_KEY, escapeRestoresLeftPane } from '@/lib/shell-layout'
@@ -60,6 +63,8 @@ function PaneRail({ side, children }: { side: 'left' | 'right'; children: ReactN
  * when Concierge asks; until then Open on a library file does it.
  * The right pane rests on chat state (dcolley/tourbillon@7a8595b
  * apps/web/components/chat/chat-context.tsx docks chat on the right).
+ * Open shows a file in that pane. Close, and Summary, return to chat state.
+ * People, dates, and status are other views in the same pane.
  */
 export function DashboardShell({ children }: { children: ReactNode }) {
   const [leftOpen, setLeftOpen] = usePaneOpen(SHELL_LEFT_OPEN_KEY)
@@ -152,6 +157,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     setRightPane(dismissRightPaneDocument())
   }
 
+  function selectView(mode: RestingPaneView) {
+    setRightPane(mode === 'chat-state' ? dismissRightPaneDocument() : openRightPaneMatterView(mode))
+  }
+
   function toggleRight() {
     if (narrow) {
       setMobileRight((open) => {
@@ -165,6 +174,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   return (
     <RightPaneActionsProvider value={{ openDocument: showDocument, dismissDocument }}>
+    <ActiveMatterProvider matterId={activeMatterId}>
     <div className="flex h-svh flex-col overflow-hidden bg-background text-foreground" data-shell="three-pane">
       <a
         href="#chat-thread"
@@ -264,9 +274,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             ) : null}
             <DocumentViewer
               matterId={mattersSession.activeId}
+              matter={mattersSession.active}
+              messages={mattersSession.messages}
               threadStatus={mattersSession.threadStatus}
               observations={mattersSession.observations}
+              viewMode={rightPane.mode}
               document={rightPane.document}
+              onSelectView={selectView}
               onDismiss={dismissDocument}
               onCollapse={() => (narrow ? setMobileRight(false) : setRightOpen(false))}
             />
@@ -280,6 +294,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       </div>
       <DisclaimerBar />
     </div>
+    </ActiveMatterProvider>
     </RightPaneActionsProvider>
   )
 }
