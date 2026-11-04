@@ -5,9 +5,11 @@ import {
   dismissRightPaneDocument,
   openedViewerLabel,
   openRightPaneDocument,
+  openRightPaneMatterView,
   retainOpenedDocument,
   rightPaneKind,
   viewerKindForFileName,
+  workspaceContentPath,
 } from './right-pane.ts'
 
 describe('right pane', () => {
@@ -65,5 +67,24 @@ describe('right pane', () => {
     assert.equal(retainOpenedDocument(libraryFile, null), libraryFile)
     assert.equal(retainOpenedDocument(libraryFile, 'matter-9'), libraryFile)
     assert.equal(retainOpenedDocument(defaultRightPaneView(), 'matter-1').mode, 'chat-state')
+  })
+
+  it('opens people, dates, or status, and dismiss returns to chat state', () => {
+    for (const mode of ['parties', 'dates', 'status'] as const) {
+      const opened = openRightPaneMatterView(mode)
+      assert.equal(opened.mode, mode)
+      assert.equal(opened.document, null)
+      assert.equal(rightPaneKind(opened), mode)
+      assert.equal(retainOpenedDocument(opened, null), opened)
+    }
+    assert.equal(dismissRightPaneDocument().mode, 'chat-state')
+    assert.equal(
+      workspaceContentPath({ name: 'letter.md', scope: 'user', matterId: 'matter-1' }),
+      '/api/workspace/content?name=letter.md&scope=user',
+    )
+    assert.equal(
+      workspaceContentPath({ name: 'photo.png', scope: 'matter', matterId: 'matter-1' }),
+      '/api/workspace/content?name=photo.png&scope=matter&matterId=matter-1',
+    )
   })
 })
