@@ -171,6 +171,10 @@ describe('dashboard shell', () => {
     assert.match(history, /One matter is one chat/)
     assert.match(history, /Deposit/)
     assert.match(history, /data-matter-id="matter-1"/)
+    assert.match(history, /aria-label="Rename Deposit"/)
+    assert.match(history, /aria-label="Archive Deposit"/)
+    assert.match(history, /Hide from this list/)
+    assert.doesNotMatch(history, /data-matters-empty/)
     assert.doesNotMatch(history, /Chat title|Matter title|Placeholder/)
     assertPlanCard(history)
     assert.ok(history.indexOf('data-plan-footer') > history.indexOf('>History<'))
@@ -182,10 +186,24 @@ describe('dashboard shell', () => {
 
     const emptyHistory = renderToStaticMarkup(createElement(HistoryPane, historyProps()))
     assert.match(emptyHistory, /No matters yet/)
+    assert.match(emptyHistory, /data-matters-empty/)
+    assert.match(emptyHistory, /data-empty-new-chat/)
+    const emptyCta = emptyHistory.slice(emptyHistory.indexOf('data-matters-empty'), emptyHistory.indexOf('data-plan-footer'))
+    assert.match(emptyCta, />New chat</)
     assert.match(emptyHistory, /href="\/library"/)
     assertPlanCard(emptyHistory)
     assert.ok(emptyHistory.indexOf('data-plan-footer') > emptyHistory.indexOf('No matters yet'))
     assert.doesNotMatch(emptyHistory, /No files yet|Open a matter to see its files|Add a file/)
+
+    const missed = renderToStaticMarkup(
+      createElement(HistoryPane, {
+        ...historyProps(),
+        query: 'wages',
+        matters: [{ id: 'matter-1', title: 'Deposit', detail: 'Opened 3 Nov 2026' }],
+      }),
+    )
+    assert.match(missed, /No matters match that search/)
+    assert.doesNotMatch(missed, /data-matters-empty/)
 
     const failedHistory = renderToStaticMarkup(
       createElement(HistoryPane, {
@@ -297,6 +315,13 @@ describe('dashboard shell', () => {
     assert.match(shell, /libraryActive=\{pathname === '\/library'\}/)
     assert.match(shell, /usePathname/)
     assert.match(shell, /useMatterSessions/)
+    assert.match(shell, /renameMatter/)
+    assert.match(shell, /archiveMatter/)
+    assert.match(shell, /archivingId/)
+    const sessions = fs.readFileSync(path.join(here, 'shell/use-matter-sessions.ts'), 'utf8')
+    assert.match(sessions, /matterOpenedFromCreate/)
+    assert.match(sessions, /method: 'PATCH'/)
+    assert.match(sessions, /archived: true/)
     assert.match(shell, /optimistic: false/)
     assert.match(fs.readFileSync(path.join(here, 'chat/composer/composer-controller.ts'), 'utf8'), /flushQueue/)
     assert.match(shell, /sendMessage/)
@@ -440,6 +465,9 @@ function historyProps() {
     onSelect: () => {},
     onNewChat: () => {},
     creating: false,
+    onRename: async () => ({ ok: true as const }),
+    onArchive: () => {},
+    archivingId: null,
     onCollapse: () => {},
   }
 }

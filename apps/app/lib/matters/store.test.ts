@@ -10,10 +10,12 @@ import {
   answerAskChoice,
   appendAskChoice,
   appendMatterMessage,
+  archiveMatter,
   createMatter,
   createMatterStore,
   getMatterThread,
   listMatters,
+  renameMatter,
   type MatterStore,
 } from './store.ts'
 
@@ -52,6 +54,46 @@ describe('mastra matter store', () => {
       assert.deepEqual(opened?.messages, [])
       assert.equal(await getMatterThread(store, 'user_b', named.id), null)
       assert.equal(await getMatterThread(store, 'user_a', created.id.replaceAll('-', '') + 'nope'), null)
+    })
+  })
+
+  it('lists only that clerk user, keeps a renamed title, and hides an archived matter', async () => {
+    await withStore(async (store) => {
+      const own = await createMatter(store, 'user_a')
+      const other = await createMatter(store, 'user_b', { title: 'Other' })
+      assert.equal(matterResourceId('user_a'), 'clerk:user_a')
+      const saved = await appendMatterMessage(store, 'user_a', own.id, {
+        role: 'user',
+        text: 'The notice arrived on Friday.',
+      })
+      assert.ok(saved)
+
+      assert.equal(await renameMatter(store, 'user_b', own.id, 'Stolen'), null)
+      const renamed = await renameMatter(store, 'user_a', own.id, '  Deposit  ')
+      assert.equal(renamed?.title, 'Deposit')
+      assert.deepEqual(
+        (await listMatters(store, 'user_a')).map((matter) => matter.title),
+        ['Deposit'],
+      )
+      const ownThread = await getMatterThread(store, 'user_a', own.id)
+      assert.equal(ownThread?.matter.title, 'Deposit')
+      assert.equal(ownThread?.messages[0]?.text, 'The notice arrived on Friday.')
+      assert.equal((await listMatters(store, 'user_b'))[0]?.title, 'Other')
+      assert.equal(await getMatterThread(store, 'user_b', own.id), null)
+
+      assert.equal(await archiveMatter(store, 'user_b', own.id), null)
+      const archived = await archiveMatter(store, 'user_a', own.id)
+      assert.equal(archived?.title, 'Deposit')
+      assert.deepEqual(await listMatters(store, 'user_a'), [])
+      const kept = await getMatterThread(store, 'user_a', own.id)
+      assert.equal(kept?.matter.title, 'Deposit')
+      assert.equal(kept?.messages[0]?.text, 'The notice arrived on Friday.')
+      assert.equal((await listMatters(store, 'user_b'))[0]?.id, other.id)
+
+      const raw = await store.memory.getThreadById({ threadId: own.id, resourceId: matterResourceId('user_a') })
+      assert.equal(raw?.resourceId, 'clerk:user_a')
+      assert.equal(raw?.metadata?.kind, 'matter')
+      assert.equal(typeof raw?.metadata?.archivedAt, 'string')
     })
   })
 

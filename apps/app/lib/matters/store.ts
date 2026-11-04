@@ -111,6 +111,32 @@ function isOwnedMatter(thread: StorageThreadType, resourceId: string): boolean {
   return thread.resourceId === resourceId && thread.metadata?.kind === MATTER_KIND
 }
 
+/**
+ * `archivedAt` is set when the person hides a matter from the default list.
+ * The thread stays in the matters database. A later slice can offer "Show archived".
+ */
+function readArchivedAt(thread: StorageThreadType): string | null {
+  const metadata = thread.metadata
+  if (!metadata || typeof metadata !== 'object') return null
+  const value = (metadata as { archivedAt?: unknown }).archivedAt
+  if (typeof value !== 'string') return null
+  const archivedAt = value.trim()
+  return archivedAt.length > 0 ? archivedAt : null
+}
+
+function isArchivedMatter(thread: StorageThreadType): boolean {
+  return readArchivedAt(thread) !== null
+}
+
+function matterThreadMetadata(thread: StorageThreadType, patch: { archivedAt?: string } = {}): StorageThreadType['metadata'] {
+  const archivedAt = patch.archivedAt ?? readArchivedAt(thread) ?? undefined
+  return {
+    ...(thread.metadata ?? {}),
+    kind: MATTER_KIND,
+    ...(archivedAt ? { archivedAt } : {}),
+  }
+}
+
 export async function createMatter(
   store: MatterStore,
   userId: string,
@@ -126,6 +152,11 @@ export async function createMatter(
   return toSummary(thread)
 }
 
+/**
+ * Matters for this Clerk user (`clerk:<userId>`), newest first.
+ * Archived matters are omitted. Their messages stay on the thread.
+ * Show archived is a later slice; there is no hard delete here.
+ */
 export async function listMatters(store: MatterStore, userId: string): Promise<MatterSummary[]> {
   const resourceId = matterResourceId(userId)
   const threads: StorageThreadType[] = []
@@ -140,9 +171,51 @@ export async function listMatters(store: MatterStore, userId: string): Promise<M
     if (!listed.hasMore) break
   }
   return threads
-    .filter((thread) => isOwnedMatter(thread, resourceId))
+    .filter((thread) => isOwnedMatter(thread, resourceId) && !isArchivedMatter(thread))
     .map(toSummary)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id))
+}
+
+/** Keeps the new title on the thread. A blank title is refused. Returns null when this user does not own the matter. */
+export async function renameMatter(
+  store: MatterStore,
+  userId: string,
+  matterId: string,
+  rawTitle: string,
+): Promise<MatterSummary | null> {
+  const thread = await ownedThread(store, userId, matterId)
+  if (!thread) return null
+  const title = resolveMatterTitle(rawTitle)
+  await store.memory.updateThread({
+    id: matterId,
+    title,
+    metadata: matterThreadMetadata(thread),
+  })
+  const updated = await ownedThread(store, userId, matterId)
+  if (!updated) return null
+  return toSummary({ ...updated, title })
+}
+
+/**
+ * Hides a matter from the default list. The thread, its title, and its messages stay.
+ * Archiving again keeps the first timestamp. Returns null when this user does not own the matter.
+ */
+export async function archiveMatter(
+  store: MatterStore,
+  userId: string,
+  matterId: string,
+): Promise<MatterSummary | null> {
+  const thread = await ownedThread(store, userId, matterId)
+  if (!thread) return null
+  const archivedAt = readArchivedAt(thread) ?? new Date().toISOString()
+  await store.memory.updateThread({
+    id: matterId,
+    title: thread.title,
+    metadata: matterThreadMetadata(thread, { archivedAt }),
+  })
+  const updated = await ownedThread(store, userId, matterId)
+  if (!updated || !isArchivedMatter(updated)) return null
+  return toSummary(updated)
 }
 
 async function ownedThread(
@@ -244,7 +317,7 @@ export async function appendMatterMessage(
   await store.memory.updateThread({
     id: matterId,
     title: thread.title,
-    metadata: { ...(thread.metadata ?? {}), kind: MATTER_KIND },
+    metadata: matterThreadMetadata(thread),
   })
   return {
     id: message.id,
@@ -338,7 +411,7 @@ export async function appendAskChoice(
   await store.memory.updateThread({
     id: matterId,
     title: thread.title,
-    metadata: { ...(thread.metadata ?? {}), kind: MATTER_KIND },
+    metadata: matterThreadMetadata(thread),
   })
   return toMatterMessage(message)
 }

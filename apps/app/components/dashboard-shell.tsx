@@ -213,6 +213,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 void mattersSession.createMatterSession()
               }}
               creating={mattersSession.creating}
+              onRename={(id, title) => mattersSession.renameMatter(id, title)}
+              onArchive={(id) => {
+                void mattersSession.archiveMatter(id)
+              }}
+              archivingId={mattersSession.archivingId}
               onCollapse={() => (narrow ? setMobileLeft(false) : setLeftOpen(false))}
               libraryActive={pathname === '/library'}
             />

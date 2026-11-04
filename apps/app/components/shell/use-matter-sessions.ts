@@ -32,6 +32,8 @@ type MatterListResponse = { matters?: MatterSummary[] }
  * returns without dropping the caller's copy; the composer queue keeps it.
  * A model reply is not requested.
  * New chat opens the matter on its scripted first turn.
+ * Rename stores the title on that thread. Archive hides it from this list
+ * and leaves the thread stored. Show archived is a later slice.
  * An askChoice card already on the matter can be answered here. The pick is
  * stored on that same thread. A first-turn card may add a templated note.
  * TODO(G-01 Concierge): stream the assistant reply after the message is stored,
@@ -45,13 +47,17 @@ export function useMatterSessions() {
   const [thread, setThread] = useState<OpenMatter | null>(null)
   const [threadError, setThreadError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [archivingId, setArchivingId] = useState<string | null>(null)
   const [sendingId, setSendingId] = useState<string | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
   const [answeringWidgetId, setAnsweringWidgetId] = useState<string | null>(null)
   const [widgetError, setWidgetError] = useState<{ toolCallId: string; message: string } | null>(null)
   const activeIdRef = useRef<string | null>(null)
   const threadRef = useRef<OpenMatter | null>(null)
+  const mattersRef = useRef<MatterSummary[]>([])
+  const hiddenIds = useRef(new Set<string>())
   const sendSeq = useRef(0)
+  mattersRef.current = matters
 
   function choose(id: string, known?: OpenMatter | null) {
     activeIdRef.current = id
@@ -74,9 +80,10 @@ export function useMatterSessions() {
         if (!Array.isArray(body.matters)) throw new Error('load')
         if (cancelled) return
         setMatters((current) => {
-          const ids = new Set(body.matters!.map((matter) => matter.id))
-          const extras = current.filter((matter) => !ids.has(matter.id))
-          return [...extras, ...body.matters!]
+          const incoming = body.matters!.filter((matter) => !hiddenIds.current.has(matter.id))
+          const ids = new Set(incoming.map((matter) => matter.id))
+          const extras = current.filter((matter) => !ids.has(matter.id) && !hiddenIds.current.has(matter.id))
+          return [...extras, ...incoming]
         })
         setListError(null)
         if (!activeIdRef.current && body.matters[0]) choose(body.matters[0].id)
@@ -271,6 +278,80 @@ export function useMatterSessions() {
     }
   }
 
+  async function renameMatter(
+    id: string,
+    title: string,
+  ): Promise<{ ok: true } | { ok: false; message: string }> {
+    try {
+      const response = await fetch(`/api/matters/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title }),
+        cache: 'no-store',
+      })
+      const body = (await response.json().catch(() => null)) as { matter?: unknown; error?: unknown } | null
+      if (!response.ok || !isMatterSummary(body?.matter) || body.matter.id !== id) {
+        const message = body && typeof body.error === 'string' && body.error.trim() ? body.error : 'That title could not be saved.'
+        return { ok: false, message }
+      }
+      const matter = body.matter
+      setMatters((current) =>
+        current
+          .map((item) => (item.id === id ? { ...item, title: matter.title, updatedAt: matter.updatedAt } : item))
+          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id)),
+      )
+      setThread((current) => {
+        if (!current || current.matter.id !== id) return current
+        return { ...current, matter: { ...current.matter, title: matter.title, updatedAt: matter.updatedAt } }
+      })
+      return { ok: true }
+    } catch {
+      return { ok: false, message: 'That title could not be saved.' }
+    }
+  }
+
+  async function archiveMatter(id: string): Promise<{ ok: true } | { ok: false; message: string }> {
+    setArchivingId(id)
+    try {
+      const response = await fetch(`/api/matters/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ archived: true }),
+        cache: 'no-store',
+      })
+      const body = (await response.json().catch(() => null)) as { matter?: unknown; error?: unknown } | null
+      if (!response.ok || !isMatterSummary(body?.matter) || body.matter.id !== id) {
+        const message = body && typeof body.error === 'string' && body.error.trim() ? body.error : 'This matter could not be archived.'
+        setListError(message)
+        return { ok: false, message }
+      }
+      hiddenIds.current.add(id)
+      const remaining = mattersRef.current.filter((matter) => matter.id !== id)
+      mattersRef.current = remaining
+      setMatters(remaining)
+      setListError(null)
+      if (activeIdRef.current === id) {
+        const next = remaining[0]
+        if (next) {
+          choose(next.id)
+        } else {
+          activeIdRef.current = null
+          setActiveId(null)
+          setThread(null)
+          setThreadError(null)
+          setSendError(null)
+          setWidgetError(null)
+        }
+      }
+      return { ok: true }
+    } catch {
+      setListError('This matter could not be archived.')
+      return { ok: false, message: 'This matter could not be archived.' }
+    } finally {
+      setArchivingId((current) => (current === id ? null : current))
+    }
+  }
+
   async function createMatterSession() {
     setCreating(true)
     setListError(null)
@@ -315,13 +396,31 @@ export function useMatterSessions() {
     observations,
     threadStatus,
     creating,
+    archivingId,
     sending: sendingId !== null && sendingId === activeId,
     sendError,
     answeringWidgetId,
     widgetError,
     choose,
     createMatterSession,
+    renameMatter,
+    archiveMatter,
     sendMessage,
     answerWidget,
   }
+}
+
+function isMatterSummary(value: unknown): value is MatterSummary {
+  if (!value || typeof value !== 'object') return false
+  const record = value as { id?: unknown; title?: unknown; createdAt?: unknown; updatedAt?: unknown }
+  return (
+    typeof record.id === 'string' &&
+    record.id.trim().length > 0 &&
+    typeof record.title === 'string' &&
+    record.title.trim().length > 0 &&
+    typeof record.createdAt === 'string' &&
+    record.createdAt.length > 0 &&
+    typeof record.updatedAt === 'string' &&
+    record.updatedAt.length > 0
+  )
 }

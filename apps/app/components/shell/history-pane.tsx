@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { Library, PanelLeftClose, Plus, Search } from 'lucide-react'
 import { PlanUsageCard } from '@/components/shell/plan-usage-card'
@@ -12,11 +13,14 @@ import { cn } from '@/lib/utils'
 /**
  * Left pane: search, a new chat, a link to the user library, and matter history.
  * List chrome adapted from dcolley/tourbillon@7a8595b
- * apps/web/components/assistant/sidebar.tsx.
+ * apps/web/components/assistant/sidebar.tsx (row, muted detail, active inset).
+ * That sidebar is an agent rail and does not rename or archive threads, so
+ * those actions are added here. Collapse is the existing pane control.
  * The Library control is a nav link only, in the shape of the sidebar item in
  * hitly-net/hitly@94b2e92 apps/app/components/app-sidebar.tsx (icon, label, href).
  * File lists and the add form live on /library, not in this pane.
  * Each row is one matter, which is one chat thread.
+ * Archive hides a row. The thread stays stored. Show archived is a later slice.
  * The plan card is pinned under the list so it stays in view while history scrolls.
  */
 export function HistoryPane({
@@ -29,6 +33,9 @@ export function HistoryPane({
   onSelect,
   onNewChat,
   creating,
+  onRename,
+  onArchive,
+  archivingId,
   onCollapse,
   libraryActive = false,
 }: {
@@ -41,11 +48,43 @@ export function HistoryPane({
   onSelect: (id: string) => void
   onNewChat: () => void
   creating: boolean
+  onRename: (id: string, title: string) => Promise<{ ok: true } | { ok: false; message: string }>
+  onArchive: (id: string) => void
+  archivingId: string | null
   onCollapse: () => void
   libraryActive?: boolean
 }) {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draftTitle, setDraftTitle] = useState('')
+  const [renameError, setRenameError] = useState<string | null>(null)
+  const [savingId, setSavingId] = useState<string | null>(null)
   const visible = filterMatterHistory(matters, query)
-  const searching = query.trim().length > 0
+  const empty = loaded && !listError && matters.length === 0
+
+  function startRename(item: MatterHistoryRow) {
+    setEditingId(item.id)
+    setDraftTitle(item.title)
+    setRenameError(null)
+  }
+
+  function cancelRename() {
+    setEditingId(null)
+    setDraftTitle('')
+    setRenameError(null)
+  }
+
+  async function saveRename(id: string) {
+    setSavingId(id)
+    setRenameError(null)
+    const result = await onRename(id, draftTitle)
+    setSavingId((current) => (current === id ? null : current))
+    if (!result.ok) {
+      setRenameError(result.message)
+      return
+    }
+    setEditingId(null)
+    setDraftTitle('')
+  }
 
   return (
     <aside
@@ -112,17 +151,49 @@ export function HistoryPane({
         ) : null}
         {!loaded ? (
           <p className="mt-3 px-1 text-xs text-muted-foreground">Loading matters…</p>
-        ) : visible.length === 0 && !listError ? (
-          <p className="mt-3 px-1 text-xs text-muted-foreground">
-            {searching ? 'No matters match that search.' : 'No matters yet. New chat opens one.'}
-          </p>
-        ) : visible.length > 0 ? (
+        ) : empty ? (
+          <div data-matters-empty="" className="mt-3 px-1">
+            <p className="text-xs text-muted-foreground">No matters yet. New chat opens one.</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              data-empty-new-chat=""
+              onClick={onNewChat}
+              disabled={creating}
+              aria-busy={creating}
+            >
+              <Plus />
+              New chat
+            </Button>
+          </div>
+        ) : visible.length === 0 ? (
+          listError ? null : (
+            <p className="mt-3 px-1 text-xs text-muted-foreground">No matters match that search.</p>
+          )
+        ) : (
           <ul className="mt-3 flex flex-col gap-1" aria-label="Matters">
             {visible.map((item) => (
-              <HistoryRow key={item.id} item={item} active={item.id === activeId} onSelect={onSelect} />
+              <HistoryRow
+                key={item.id}
+                item={item}
+                active={item.id === activeId}
+                editing={editingId === item.id}
+                draftTitle={draftTitle}
+                renameError={editingId === item.id ? renameError : null}
+                saving={savingId === item.id}
+                archiving={archivingId === item.id}
+                onSelect={onSelect}
+                onDraftTitle={setDraftTitle}
+                onStartRename={() => startRename(item)}
+                onCancelRename={cancelRename}
+                onSaveRename={() => void saveRename(item.id)}
+                onArchive={() => onArchive(item.id)}
+              />
             ))}
           </ul>
-        ) : null}
+        )}
       </div>
       <div data-plan-footer="" className="shrink-0 border-t px-3 py-3">
         <PlanUsageCard />
@@ -134,27 +205,108 @@ export function HistoryPane({
 function HistoryRow({
   item,
   active,
+  editing,
+  draftTitle,
+  renameError,
+  saving,
+  archiving,
   onSelect,
+  onDraftTitle,
+  onStartRename,
+  onCancelRename,
+  onSaveRename,
+  onArchive,
 }: {
   item: MatterHistoryRow
   active: boolean
+  editing: boolean
+  draftTitle: string
+  renameError: string | null
+  saving: boolean
+  archiving: boolean
   onSelect: (id: string) => void
+  onDraftTitle: (title: string) => void
+  onStartRename: () => void
+  onCancelRename: () => void
+  onSaveRename: () => void
+  onArchive: () => void
 }) {
+  if (editing) {
+    return (
+      <li>
+        <form
+          data-matter-id={item.id}
+          aria-label={`Rename ${item.title}`}
+          className="rounded-lg px-2 py-2 hover:bg-sidebar-accent"
+          onSubmit={(event) => {
+            event.preventDefault()
+            onSaveRename()
+          }}
+        >
+          <Label htmlFor={`matter-title-${item.id}`} className="text-xs font-medium text-muted-foreground">
+            Title
+          </Label>
+          <Input
+            id={`matter-title-${item.id}`}
+            value={draftTitle}
+            onChange={(event) => onDraftTitle(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Escape') return
+              event.preventDefault()
+              onCancelRename()
+            }}
+            autoFocus
+            disabled={saving}
+            aria-invalid={renameError ? true : undefined}
+            className="mt-1"
+          />
+          {renameError ? (
+            <p role="alert" className="pt-1 text-xs text-muted-foreground">
+              {renameError}
+            </p>
+          ) : null}
+          <div className="flex gap-1 pt-2">
+            <Button type="submit" size="xs" disabled={saving} aria-busy={saving}>
+              Save
+            </Button>
+            <Button type="button" variant="ghost" size="xs" onClick={onCancelRename} disabled={saving}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </li>
+    )
+  }
+
   return (
-    <li>
+    <li className={cn('rounded-lg', active && 'bg-sidebar-accent shadow-[inset_3px_0_0_var(--chrome)]')}>
       <button
         type="button"
         data-matter-id={item.id}
         aria-current={active ? 'true' : undefined}
         onClick={() => onSelect(item.id)}
-        className={cn(
-          'w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-sidebar-accent',
-          active && 'bg-sidebar-accent shadow-[inset_3px_0_0_var(--chrome)]',
-        )}
+        className="w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-sidebar-accent"
       >
         <span className="block truncate font-medium">{item.title}</span>
         <span className="block truncate text-xs text-muted-foreground">{item.detail}</span>
       </button>
+      <div className="flex gap-1 px-1 pb-1">
+        <Button type="button" variant="ghost" size="xs" aria-label={`Rename ${item.title}`} onClick={onStartRename}>
+          Rename
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          aria-label={`Archive ${item.title}`}
+          title="Hide from this list. The matter stays saved."
+          onClick={onArchive}
+          disabled={archiving}
+          aria-busy={archiving}
+        >
+          Archive
+        </Button>
+      </div>
     </li>
   )
 }
