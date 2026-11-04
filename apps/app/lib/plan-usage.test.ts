@@ -11,6 +11,10 @@ describe('basic plan stub', () => {
   it('names Basic, free, with a remaining placeholder and a closed upgrade', () => {
     assert.equal(basicPlanUsage.tierName, 'Basic')
     assert.equal(basicPlanUsage.priceLabel, 'Free')
+    assert.equal(basicPlanUsage.modelClassId, 'small')
+    assert.equal(basicPlanUsage.modelClassLabel, 'Small')
+    assert.equal(basicPlanUsage.modelId, 'chatlegal-1')
+    assert.equal(basicPlanUsage.modelClassAffordance, 'Small · chatlegal-1')
     assert.equal(basicPlanUsage.remainingKind, 'placeholder')
     assert.equal(basicPlanUsage.remainingLabel, 'Nothing is counted yet')
     assert.equal(basicPlanUsage.remainingDetail, 'What is left will show here.')

@@ -7,12 +7,15 @@
  * The queue there is follow-ups while a run is open. Here it is text that has not
  * been stored yet, with a quiet retry when the connection drops. Attachments, steer,
  * and stop are not copied.
+ * The send row names the default class for Basic, in the place a model control would sit.
+ * That label is not a menu.
  */
 
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent, type MouseEvent } from 'react'
 import { Pencil, RotateCw, Send, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { defaultModelClass, modelClassAffordance } from '@/lib/model-class'
 import type { MatterThreadStatus } from '@/lib/matters/types'
 import {
   createComposerController,
@@ -279,8 +282,17 @@ export function ComposerView({
           placeholder={state.matterId ? 'Write what has happened' : 'Start a new chat to write here'}
           className="max-h-40 min-h-16 w-full resize-none border-0 shadow-none focus-visible:ring-0"
         />
-        <div className="flex items-center gap-2">
-          <p className="flex-1 text-xs text-muted-foreground" aria-live="polite">
+        <div className="flex flex-wrap items-center gap-2">
+          <p
+            data-slot="model-class"
+            data-model-class={defaultModelClass.id}
+            data-model-id={defaultModelClass.modelId}
+            className="shrink-0 rounded-md border border-border bg-background px-1.5 py-0.5 text-xs text-muted-foreground"
+          >
+            <span className="sr-only">Model class </span>
+            {modelClassAffordance()}
+          </p>
+          <p className="min-w-0 flex-1 text-xs text-muted-foreground" aria-live="polite">
             {hint(state, threadStatus)}
           </p>
           <Button type="submit" size="sm" disabled={!canSend} aria-busy={state.submitting}>

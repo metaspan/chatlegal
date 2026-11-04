@@ -15,6 +15,7 @@ import type { AskChoiceAnswer, MatterMessage, MatterObservations, MatterThreadSt
  * dcolley/tourbillon@7a8595b apps/web/components/assistant/composer/composer.tsx
  * (bordered field, message label, send row). A send that fails or times out
  * stays in the queue and is tried again when the connection returns.
+ * The send row names the default class (Small, chatlegal-1). It is not a picker.
  * Attachments, steer, and stop stay out: there is no model run yet.
  * TODO(G-01 Concierge): stream the assistant reply after Send stores the user's words.
  * An askChoice card already stored on the matter renders here. The model does not emit one yet.
