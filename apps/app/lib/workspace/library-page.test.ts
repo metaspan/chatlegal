@@ -19,9 +19,15 @@ describe('library page', () => {
       const previousDb = process.env.CHATLEGAL_MATTERS_DB
       const previousRoot = process.env.CHATLEGAL_WORKSPACE_ROOT
       const previousSession = process.env.CHATLEGAL_TEST_SESSION
+      const previousEmbed = process.env.CHATLEGAL_EMBED_ENABLED
+      const previousEmbedModel = process.env.CHATLEGAL_EMBED_MODEL
+      const previousEmbedUrl = process.env.CHATLEGAL_EMBED_BASE_URL
       process.env.CHATLEGAL_MATTERS_DB = `file:${path.join(dir, 'matters.db')}`
       process.env.CHATLEGAL_WORKSPACE_ROOT = path.join(dir, 'workspace')
       process.env.CHATLEGAL_TEST_SESSION = 'signed-in'
+      delete process.env.CHATLEGAL_EMBED_ENABLED
+      delete process.env.CHATLEGAL_EMBED_MODEL
+      delete process.env.CHATLEGAL_EMBED_BASE_URL
       try {
         await writeUserFile('user_test', 'notice.txt', 'Bring the agreement.')
         await writeUserFile('user_b', 'secret.txt', 'other user secret text')
@@ -34,6 +40,9 @@ describe('library page', () => {
         assert.match(html, /Select a file from the list to see it/)
         assert.doesNotMatch(html, /secret\.txt|other user secret text|Move to this matter|Move to library/)
         assert.doesNotMatch(html, /Bring the agreement/)
+        assert.match(html, /data-file-search="off"/)
+        assert.match(html, /Search across the words in your files is turned off/)
+        assert.doesNotMatch(html, /Read these files for search|Search the words/)
       } finally {
         if (previousDb === undefined) delete process.env.CHATLEGAL_MATTERS_DB
         else process.env.CHATLEGAL_MATTERS_DB = previousDb
@@ -41,6 +50,12 @@ describe('library page', () => {
         else process.env.CHATLEGAL_WORKSPACE_ROOT = previousRoot
         if (previousSession === undefined) delete process.env.CHATLEGAL_TEST_SESSION
         else process.env.CHATLEGAL_TEST_SESSION = previousSession
+        if (previousEmbed === undefined) delete process.env.CHATLEGAL_EMBED_ENABLED
+        else process.env.CHATLEGAL_EMBED_ENABLED = previousEmbed
+        if (previousEmbedModel === undefined) delete process.env.CHATLEGAL_EMBED_MODEL
+        else process.env.CHATLEGAL_EMBED_MODEL = previousEmbedModel
+        if (previousEmbedUrl === undefined) delete process.env.CHATLEGAL_EMBED_BASE_URL
+        else process.env.CHATLEGAL_EMBED_BASE_URL = previousEmbedUrl
         fs.rmSync(dir, { recursive: true, force: true })
       }
     })

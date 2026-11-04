@@ -39,13 +39,15 @@ describe('Consumer route gate', () => {
       '/api/matters',
       '/api/matters/matter-1',
       '/api/matters/matter-1/files',
+      '/api/matters/matter-1/index',
       '/api/library',
+      '/api/library/index',
       '/api/workspace/move',
       '/api/workspace/content',
     ]) {
       await protectSignedInRoute(pathname, auth)
     }
-    assert.equal(calls.length, 11)
+    assert.equal(calls.length, 13)
   })
 
   it('wires clerkMiddleware to the route gate and keeps the Frontend API matcher', () => {

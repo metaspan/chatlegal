@@ -19,6 +19,9 @@ describe('matter files', () => {
     assert.match(html, /aria-label="Open notice.pdf"/)
     assert.doesNotMatch(html, /Move to/)
     assert.doesNotMatch(html, /data-matter-upload/)
+    assert.match(html, /data-file-search="off"/)
+    assert.match(html, /Search across the words in your files is turned off/)
+    assert.doesNotMatch(html, /Read these files for search/)
     const source = fs.readFileSync(new URL('../../components/shell/matter-files.tsx', import.meta.url), 'utf8')
     assert.match(source, /scope: 'matter'/)
     assert.match(source, /openDocument/)
@@ -81,6 +84,7 @@ describe('matter files', () => {
   it('asks for a chat when no matter is open', () => {
     const html = renderToStaticMarkup(createElement(MatterFiles))
     assert.match(html, /Open a chat to see files stored with it/)
+    assert.match(html, /Search across the words in your files is turned off/)
     assert.doesNotMatch(html, /aria-label="Open /)
     assert.doesNotMatch(html, /data-matter-upload/)
   })

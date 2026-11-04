@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { FileExistsError, FileNotFoundError, LocalFilesystem, Workspace } from '@mastra/core/workspace'
+import { forgetIndexedFile } from '../embeddings/vector'
 import { getMatterStore, userOwnsMatter, type MatterStore } from '../matters/store'
 import {
   assertWorkspaceText,
@@ -27,7 +28,9 @@ import type { MoveWorkspaceFileResult, WorkspaceFile, WorkspaceScope } from './t
  * The chat workspace in dcolley/tourbillon@7a8595b
  * packages/mastra/src/execution-workspace.ts (buildChatWorkspace) is a
  * Workspace plus LocalFilesystem, with tools left off. This app does the
- * same: no sandbox, no search index, and no agent. Send does not use these files.
+ * same: no sandbox, tools off, and no agent. Prepared search, when its own
+ * settings are on, is a separate libSQL file under the workspace root.
+ * Send does not use these files, and it does not search them.
  * Containment stays on, so a path cannot leave its base directory.
  *
  * The library and each matter are separate workspaces. A file moves from
@@ -336,7 +339,9 @@ type WorkspaceTransfer = { name: string; from: WorkspaceScope; to: WorkspaceScop
  * `reason: 'matter'` means a matter in the request is not theirs.
  * `reason: 'file'` means the source file is not there.
  * The source stays put when the destination already has that name.
- * Copy leaves the source in place. Move removes it after the write.
+ * Copy leaves the source in place, including any prepared search rows.
+ * Move removes the file after the write, and drops prepared search rows
+ * in the place it left. That drop does nothing when search was never prepared.
  */
 async function transferWorkspaceFile(
   userId: string,
@@ -361,6 +366,12 @@ async function transferWorkspaceFile(
     throw error
   }
   if (mode === 'copy') return { ok: true, file: written }
+  try {
+    await forgetIndexedFile(userId, input.from, name, envOf(options))
+  } catch (error) {
+    await deleteAt(to, name).catch(() => undefined)
+    throw error
+  }
   try {
     await deleteAt(from, name)
   } catch (error) {

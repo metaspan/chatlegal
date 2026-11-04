@@ -61,6 +61,7 @@ describe('signed-in pages guard the session', () => {
       files.map((file) => path.relative(appDir, file)).sort(),
       [
         'app/api/matters/[matterId]/files/route.ts',
+        'app/api/matters/[matterId]/index/route.ts',
         'app/api/matters/[matterId]/messages/route.ts',
         'app/api/matters/[matterId]/route.ts',
         'app/api/matters/[matterId]/widgets/[toolCallId]/answer/route.ts',
@@ -76,7 +77,7 @@ describe('signed-in pages guard the session', () => {
   })
 
   it('library and workspace move check the session', () => {
-    for (const rel of ['app/api/library/route.ts', 'app/api/workspace/move/route.ts']) {
+    for (const rel of ['app/api/library/route.ts', 'app/api/library/index/route.ts', 'app/api/workspace/move/route.ts']) {
       const source = fs.readFileSync(path.join(appDir, rel), 'utf8')
       assert.match(source, /requireConsumerSession/, rel)
       assert.doesNotMatch(source, /searchParams|userId=/, rel)
