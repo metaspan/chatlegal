@@ -18,7 +18,7 @@ import type { AskChoiceAnswer, MatterMessage, MatterObservations, MatterThreadSt
  * The send row names the default class (Small, chatlegal-1). It is not a picker.
  * Attachments, steer, and stop stay out: there is no model run yet.
  * TODO(G-01 Concierge): stream the assistant reply after Send stores the user's words.
- * An askChoice card already stored on the matter renders here. The model does not emit one yet.
+ * A new matter already has a scripted first turn. The model does not emit askChoice yet.
  * The draft is kept against the open matter id.
  */
 export function ChatColumn({
@@ -56,12 +56,24 @@ export function ChatColumn({
   children?: ReactNode
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null)
+  const place = useRef<{ matterId: string; lastId: string } | null>(null)
   const showSummary = threadStatus === 'ready' && Boolean(observations?.summary.trim())
   const lastId = messages.at(-1)?.id ?? ''
 
   useEffect(() => {
     const el = scrollerRef.current
     if (!el) return
+    const key = matterId ?? ''
+    // Wait until the thread arrives, then show the opening notice rather than the foot of a long first turn.
+    if (messages.length === 0 && matterId) return
+    const hasUser = messages.some((message) => message.role === 'user')
+    const previous = place.current
+    place.current = { matterId: key, lastId }
+    if (!previous || previous.matterId !== key) {
+      el.scrollTop = hasUser ? el.scrollHeight : 0
+      return
+    }
+    if (previous.lastId === lastId) return
     el.scrollTop = el.scrollHeight
   }, [matterId, messages.length, lastId])
 
