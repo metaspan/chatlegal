@@ -666,3 +666,169 @@ button.home-cta:disabled {
 
   .prose h1 { font-size: 2rem; }
 }
+
+/* Restrained section motion. Scroll reveal is a view() timeline; ScrollReveal.tsx
+   covers browsers without it. Hover uses transform so it can sit alongside translate. */
+
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    translate: 0 0.45rem;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes section-rise {
+  from {
+    opacity: 0;
+    translate: 0 0.55rem;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.pager a:hover {
+  border-color: color-mix(in srgb, var(--ink) 16%, var(--line));
+}
+
+.child-links li:hover,
+.top-links section:hover {
+  background: var(--bg-raised);
+}
+
+.top-links section:hover {
+  border-radius: 0.65rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-bar,
+  .home-wrap > .eyebrow,
+  .home-wrap > h1,
+  .home-wrap > .home-lede,
+  .home-wrap > .home-actions,
+  .prose > h1 {
+    animation: hero-in 780ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .home-wrap > h1,
+  .prose > h1 { animation-delay: 50ms; }
+
+  .home-wrap > .home-lede { animation-delay: 100ms; }
+
+  .home-wrap > .home-actions { animation-delay: 150ms; }
+
+  .pager a,
+  .home-cta,
+  .child-links li,
+  .top-links section {
+    transition:
+      transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 240ms ease,
+      background-color 240ms ease,
+      border-color 240ms ease;
+  }
+
+  .pager a:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1.05rem rgb(34 28 22 / 0.08);
+  }
+
+  html[data-theme='dark'] .pager a:hover {
+    box-shadow: 0 0.5rem 1.05rem rgb(0 0 0 / 0.35);
+  }
+
+  .home-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0.4rem 0.85rem color-mix(in srgb, var(--banner-bg) 28%, transparent);
+  }
+
+  button.home-cta:disabled,
+  button.home-cta:disabled:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  @supports (animation-timeline: view()) {
+    .home-points > li,
+    .home-source,
+    .home-waitlist,
+    .prose > :not(h1),
+    .pager a {
+      animation-name: section-rise;
+      animation-duration: auto;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: view();
+      /* Long enough that a wheel step does not skip the fade.
+         The tall waitlist block finishes sooner so its heading does not sit grey. */
+      animation-range: entry 0% entry 10rem;
+    }
+
+    .home-waitlist {
+      animation-range: entry 0% entry 4.5rem;
+    }
+
+    .home-points > li:nth-child(2),
+    .pager a[rel='next'] {
+      animation-range: entry 0.6rem entry 10.6rem;
+    }
+
+    .home-points > li:nth-child(3) {
+      animation-range: entry 1.2rem entry 11.2rem;
+    }
+
+    .home-points > li:focus-within,
+    .home-source:focus-within,
+    .home-waitlist:focus-within,
+    .prose > :not(h1):focus-within,
+    .pager a:focus-visible {
+      animation: none;
+      opacity: 1;
+      translate: none;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion='io'] .io-pending {
+    opacity: 0;
+    translate: 0 0.55rem;
+  }
+
+  html[data-motion='io'] .io-target {
+    transition:
+      opacity 520ms cubic-bezier(0.16, 1, 0.3, 1),
+      translate 520ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  html[data-motion='io'] .io-target.io-in {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+@media print {
+  .home-bar,
+  .home-wrap > .eyebrow,
+  .home-wrap > h1,
+  .home-wrap > .home-lede,
+  .home-wrap > .home-actions,
+  .home-points > li,
+  .home-source,
+  .home-waitlist,
+  .prose > *,
+  .pager a {
+    animation: none !important;
+    opacity: 1 !important;
+    translate: none !important;
+  }
+}

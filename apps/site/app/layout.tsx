@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Atkinson_Hyperlegible, Newsreader } from 'next/font/google'
 import Script from 'next/script'
+import { ScrollReveal } from '@/components/ScrollReveal'
 import './globals.css'
 
 const sans = Atkinson_Hyperlegible({
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Script id="theme-init" strategy="beforeInteractive">
           {themeInit}
         </Script>
+        <ScrollReveal />
         {children}
       </body>
     </html>
