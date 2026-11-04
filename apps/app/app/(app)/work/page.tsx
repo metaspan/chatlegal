@@ -10,7 +10,7 @@ export default async function WorkPage() {
   return (
     <section className="flex max-w-prose flex-col gap-3">
       <h1 className="font-serif text-2xl font-semibold tracking-tight">Work</h1>
-      <p className="text-muted-foreground">Work on the open matter will be listed here.</p>
+      <p className="text-muted-foreground">Files you add stay with the open matter.</p>
       <MatterFiles />
     </section>
   )

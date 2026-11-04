@@ -34,6 +34,7 @@ export function useLibrary(matterId: string | null, seed?: LibrarySeed) {
   const [matterLoaded, setMatterLoaded] = useState(false)
   const [matterError, setMatterError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [movingName, setMovingName] = useState<string | null>(null)
 
   async function reloadLibrary(): Promise<boolean> {
@@ -131,6 +132,31 @@ export function useLibrary(matterId: string | null, seed?: LibrarySeed) {
     }
   }, [matterId])
 
+  async function uploadMatterFile(file: File, id: string): Promise<boolean> {
+    setUploading(true)
+    setMatterError(null)
+    try {
+      const body = new FormData()
+      body.append('file', file, file.name)
+      const response = await fetch(`/api/matters/${encodeURIComponent(id)}/files`, {
+        method: 'POST',
+        body,
+        cache: 'no-store',
+      })
+      if (!response.ok) {
+        setMatterError(await errorText(response, 'The file could not be added to this matter.'))
+        return false
+      }
+      if (matterId) return await reloadMatter(matterId)
+      return true
+    } catch {
+      setMatterError('The file could not be added to this matter.')
+      return false
+    } finally {
+      setUploading(false)
+    }
+  }
+
   async function addFile(input: { name: string; text: string }): Promise<boolean> {
     setAdding(true)
     setError(null)
@@ -193,11 +219,13 @@ export function useLibrary(matterId: string | null, seed?: LibrarySeed) {
     loaded,
     error,
     adding,
+    uploading,
     matterFiles,
     matterLoaded,
     matterError,
     movingName,
     addFile,
+    uploadMatterFile,
     moveToMatter,
     moveToLibrary,
   }

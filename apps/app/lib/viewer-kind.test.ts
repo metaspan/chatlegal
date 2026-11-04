@@ -4,7 +4,7 @@ import { VIEWER_KINDS, isViewerKind, viewerPanelCopy } from './viewer-kind.ts'
 
 describe('viewer kinds', () => {
   it('covers markdown, image, pdf, chat state, and the matter views', () => {
-    assert.deepEqual(VIEWER_KINDS, ['markdown', 'image', 'pdf', 'chat-state', 'parties', 'dates', 'status'])
+    assert.deepEqual(VIEWER_KINDS, ['markdown', 'image', 'pdf', 'docx', 'chat-state', 'parties', 'dates', 'status'])
     for (const kind of VIEWER_KINDS) {
       const copy = viewerPanelCopy(kind)
       assert.ok(copy.heading.length > 0)
@@ -12,7 +12,10 @@ describe('viewer kinds', () => {
     }
     assert.match(viewerPanelCopy('markdown').body, /Markdown/)
     assert.match(viewerPanelCopy('pdf').body, /PDF/)
+    assert.match(viewerPanelCopy('docx').body, /downloaded/)
+    assert.doesNotMatch(viewerPanelCopy('docx').body, /solicitor|advice/i)
     assert.equal(isViewerKind('image'), true)
-    assert.equal(isViewerKind('docx'), false)
+    assert.equal(isViewerKind('docx'), true)
+    assert.equal(isViewerKind('slideshow'), false)
   })
 })

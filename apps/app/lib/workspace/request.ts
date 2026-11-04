@@ -1,4 +1,12 @@
 import type { WorkspaceScope } from './types'
+import {
+  sanitizeUploadFileName,
+  UPLOAD_NAME_ERROR,
+  UPLOAD_SIZE_ERROR,
+  UPLOAD_TYPE_ERROR,
+  uploadBodyTooLarge,
+  uploadRejection,
+} from './upload-policy'
 
 export class WorkspaceRequestError extends Error {
   constructor(message: string) {
@@ -26,6 +34,40 @@ export function readFileName(body: Record<string, unknown>): string {
   const name = body.name
   if (typeof name !== 'string') throw new WorkspaceRequestError('File name must be text.')
   return name
+}
+
+function isUploadedFile(value: unknown): value is File {
+  if (typeof File !== 'undefined' && value instanceof File) return true
+  if (!value || typeof value !== 'object') return false
+  const file = value as { name?: unknown; size?: unknown; arrayBuffer?: unknown }
+  return typeof file.name === 'string' && typeof file.size === 'number' && typeof file.arrayBuffer === 'function'
+}
+
+/**
+ * Multipart upload for one matter file.
+ * The field name is `file`. The stored name is a single safe segment.
+ */
+export async function readMatterUpload(request: Request): Promise<{ name: string; bytes: Buffer }> {
+  if (uploadBodyTooLarge(request.headers.get('content-length'))) {
+    throw new WorkspaceRequestError(UPLOAD_SIZE_ERROR)
+  }
+  let form: FormData
+  try {
+    form = await request.formData()
+  } catch {
+    throw new WorkspaceRequestError(UPLOAD_TYPE_ERROR)
+  }
+  const picked = form.get('file')
+  if (!isUploadedFile(picked)) throw new WorkspaceRequestError(UPLOAD_TYPE_ERROR)
+  const name = sanitizeUploadFileName(picked.name)
+  if (!name) throw new WorkspaceRequestError(UPLOAD_NAME_ERROR)
+  const bytes = Buffer.from(await picked.arrayBuffer())
+  if (bytes.length !== picked.size) {
+    throw new WorkspaceRequestError('This file could not be read in full. Try again.')
+  }
+  const rejection = uploadRejection(name, bytes.length)
+  if (rejection) throw new WorkspaceRequestError(rejection)
+  return { name, bytes }
 }
 
 export function readFileText(body: Record<string, unknown>): string {

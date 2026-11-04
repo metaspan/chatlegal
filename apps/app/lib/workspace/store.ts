@@ -12,6 +12,11 @@ import {
   WorkspacePathError,
   workspaceFileName,
 } from './paths'
+import {
+  sanitizeUploadFileName,
+  UPLOAD_NAME_ERROR,
+  uploadRejection,
+} from './upload-policy'
 import type { MoveWorkspaceFileResult, WorkspaceFile, WorkspaceScope } from './types'
 
 /**
@@ -26,6 +31,9 @@ import type { MoveWorkspaceFileResult, WorkspaceFile, WorkspaceScope } from './t
  * The library and each matter are separate workspaces. A file moves from
  * one to the other by read, write, and delete. That move is what a later
  * Concierge calls. It is not an agent tool yet.
+ *
+ * A matter upload writes the original bytes through the same LocalFilesystem
+ * (contained, tools off). PDF, Word, and Markdown only, up to 10 MB.
  */
 
 export type WorkspaceStoreOptions = {
@@ -127,6 +135,33 @@ async function writeAt(basePath: string, name: string, text: string): Promise<Wo
       throw error
     }
     return toFile(safe, await disk.stat(safe))
+  })
+}
+
+async function writeBytesAt(basePath: string, name: string, bytes: Buffer): Promise<WorkspaceFile> {
+  const safeName = sanitizeUploadFileName(name)
+  if (!safeName) throw new WorkspacePathError(UPLOAD_NAME_ERROR)
+  const safe = workspaceFileName(safeName)
+  const rejection = uploadRejection(safe, bytes.length)
+  if (rejection) throw new WorkspacePathError(rejection)
+  return withFilesystem(basePath, async (disk) => {
+    if (await disk.exists(safe)) {
+      throw new WorkspaceConflictError('A file with that name is already there.')
+    }
+    try {
+      await disk.writeFile(safe, bytes, { overwrite: false })
+    } catch (error) {
+      if (error instanceof FileExistsError) {
+        throw new WorkspaceConflictError('A file with that name is already there.')
+      }
+      throw error
+    }
+    const info = await disk.stat(safe)
+    if (info.type !== 'file' || info.size !== bytes.length) {
+      await disk.deleteFile(safe).catch(() => undefined)
+      throw new WorkspacePathError('The file could not be stored in full.')
+    }
+    return toFile(safe, info)
   })
 }
 
@@ -240,6 +275,22 @@ export async function writeMatterFile(
   const base = await matterBase(userId, matterId, options)
   if (!base) return null
   return writeAt(base, name, text)
+}
+
+/**
+ * Store an uploaded PDF, Word document, or Markdown file as the original bytes.
+ * Null when the matter is not theirs. The name is one safe segment.
+ */
+export async function writeMatterFileBytes(
+  userId: string,
+  matterId: string,
+  name: string,
+  bytes: Buffer,
+  options?: WorkspaceStoreOptions,
+): Promise<WorkspaceFile | null> {
+  const base = await matterBase(userId, matterId, options)
+  if (!base) return null
+  return writeBytesAt(base, name, bytes)
 }
 
 /**

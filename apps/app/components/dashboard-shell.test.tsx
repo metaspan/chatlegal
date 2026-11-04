@@ -154,6 +154,16 @@ describe('dashboard shell', () => {
     assert.match(image, /alt="photo.png"/)
     assert.match(image, /data-viewer-image="photo.png"/)
     assert.match(image, /\/api\/workspace\/content\?name=photo\.png&amp;scope=matter&amp;matterId=matter-1/)
+    const docx = renderViewer(openRightPaneDocument({ name: 'letter.docx', scope: 'matter', matterId: 'matter-1' }))
+    assert.equal(rightPaneKind(openRightPaneDocument({ name: 'letter.docx', scope: 'matter', matterId: 'matter-1' })), 'docx')
+    assert.match(docx, /data-viewer-kind="docx"/)
+    assert.match(docx, /data-viewer-docx="letter.docx"/)
+    assert.match(docx, />\s*Word document\s*</)
+    assert.match(docx, /not shown on this page/)
+    assert.match(docx, /Download letter\.docx/)
+    assert.match(docx, /\/api\/workspace\/content\?name=letter\.docx&amp;scope=matter&amp;matterId=matter-1/)
+    assert.doesNotMatch(docx, /<iframe|data-markdown-preview|data-viewer-text/)
+    assert.doesNotMatch(docx, /solicitor/i)
     const other = renderViewer(openRightPaneDocument({ name: 'notes.txt', scope: 'user' }), {
       fileBody: { status: 'ready', text: 'Bring the agreement.' },
     })

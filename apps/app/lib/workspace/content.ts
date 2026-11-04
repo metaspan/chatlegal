@@ -26,7 +26,18 @@ export function workspaceContentType(name: string): string {
       return 'image/avif'
     case 'pdf':
       return 'application/pdf'
+    case 'docx':
+      return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     default:
       return 'text/plain; charset=utf-8'
   }
+}
+
+/** Word documents download. The viewer does not render them. */
+export function workspaceContentDisposition(name: string): string {
+  const base = name.trim().split(/[/\\]/).pop() ?? ''
+  const dot = base.lastIndexOf('.')
+  const ext = dot <= 0 ? '' : base.slice(dot + 1).toLowerCase()
+  const mode = ext === 'docx' ? 'attachment' : 'inline'
+  return `${mode}; filename="${base.replaceAll('"', '')}"`
 }

@@ -4,17 +4,29 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { createMatter, createMatterStore, type MatterStore } from '../matters/store.ts'
-import { matterWorkspaceDir, userLibraryDir, workspaceRoot, WorkspacePathError } from './paths.ts'
+import { matterWorkspaceDir, userLibraryDir, workspaceRoot, WorkspaceConflictError, WorkspacePathError } from './paths.ts'
 import {
   listMatterFiles,
   listUserFiles,
   moveWorkspaceFile,
   readMatterFile,
+  readMatterFileBytes,
   readUserFile,
   writeMatterFile,
+  writeMatterFileBytes,
   writeUserFile,
   type WorkspaceStoreOptions,
 } from './store.ts'
+import {
+  sanitizeUploadFileName,
+  UPLOAD_EMPTY_ERROR,
+  UPLOAD_FORM_OVERHEAD_BYTES,
+  UPLOAD_SIZE_ERROR,
+  UPLOAD_TYPE_ERROR,
+  uploadBodyTooLarge,
+  uploadRejection,
+  WORKSPACE_MAX_UPLOAD_BYTES,
+} from './upload-policy.ts'
 
 async function withFixture(run: (options: WorkspaceStoreOptions) => Promise<void>) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chatlegal-workspace-'))
@@ -28,6 +40,27 @@ async function withFixture(run: (options: WorkspaceStoreOptions) => Promise<void
     fs.rmSync(dir, { recursive: true, force: true })
   }
 }
+
+describe('upload policy', () => {
+  it('accepts PDF, Word, and Markdown up to 10 MB', () => {
+    assert.equal(WORKSPACE_MAX_UPLOAD_BYTES, 10_485_760)
+    assert.equal(uploadRejection('letter.pdf', 12), null)
+    assert.equal(uploadRejection('letter.md', 12), null)
+    assert.equal(uploadRejection('Letter.DOCX', 12), null)
+    assert.equal(uploadRejection('notes.txt', 12), UPLOAD_TYPE_ERROR)
+    assert.equal(uploadRejection('photo.png', 12), UPLOAD_TYPE_ERROR)
+    assert.equal(uploadRejection('letter.pdf', 0), UPLOAD_EMPTY_ERROR)
+    assert.equal(uploadRejection('letter.pdf', WORKSPACE_MAX_UPLOAD_BYTES + 1), UPLOAD_SIZE_ERROR)
+    assert.equal(sanitizeUploadFileName('Council letter.pdf'), 'Council-letter.pdf')
+    assert.equal(sanitizeUploadFileName('../escape.pdf'), 'escape.pdf')
+    assert.equal(sanitizeUploadFileName('folder\\note.md'), 'note.md')
+    assert.equal(sanitizeUploadFileName('.pdf'), 'pdf')
+    assert.equal(uploadRejection('pdf', 12), UPLOAD_TYPE_ERROR)
+    assert.equal(uploadBodyTooLarge(String(WORKSPACE_MAX_UPLOAD_BYTES + UPLOAD_FORM_OVERHEAD_BYTES + 1)), true)
+    assert.equal(uploadBodyTooLarge(String(WORKSPACE_MAX_UPLOAD_BYTES + 100)), false)
+    assert.equal(uploadBodyTooLarge(null), false)
+  })
+})
 
 describe('workspace root', () => {
   it('defaults to data/workspace and accepts the host directory', () => {
@@ -139,6 +172,49 @@ describe('mastra workspace files', () => {
       await assert.rejects(writeUserFile('user_a', 'nested/file.txt', 'nope', options), WorkspacePathError)
       assert.equal(fs.existsSync(path.join(root, 'escape.txt')), false)
       assert.deepEqual(await listUserFiles('user_a', options), [])
+    })
+  })
+
+  it('stores an uploaded PDF and Word document as the original bytes', async () => {
+    await withFixture(async (options) => {
+      const matter = await createMatter(options.matters!, 'user_a', { title: 'Deposit' })
+      const pdf = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x00, 0xff, 0xfe])
+      const docx = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0xff])
+      const markdown = Buffer.from('# Deposit\n\nBring the agreement.\n', 'utf8')
+
+      const storedPdf = await writeMatterFileBytes('user_a', matter.id, 'Council letter.PDF', pdf, options)
+      assert.equal(storedPdf?.name, 'Council-letter.PDF')
+      assert.equal(storedPdf?.size, pdf.length)
+      assert.deepEqual(await readMatterFileBytes('user_a', matter.id, 'Council-letter.PDF', options), pdf)
+
+      const storedDocx = await writeMatterFileBytes('user_a', matter.id, 'reply.docx', docx, options)
+      assert.equal(storedDocx?.name, 'reply.docx')
+      assert.deepEqual(await readMatterFileBytes('user_a', matter.id, 'reply.docx', options), docx)
+
+      const storedMd = await writeMatterFileBytes('user_a', matter.id, 'note.md', markdown, options)
+      assert.equal(await readMatterFile('user_a', matter.id, 'note.md', options), '# Deposit\n\nBring the agreement.\n')
+
+      const names = (await listMatterFiles('user_a', matter.id, options))?.map((file) => file.name)
+      assert.deepEqual(names, ['Council-letter.PDF', 'note.md', 'reply.docx'])
+
+      await assert.rejects(
+        writeMatterFileBytes('user_a', matter.id, 'Council letter.PDF', pdf, options),
+        WorkspaceConflictError,
+      )
+      await assert.rejects(
+        writeMatterFileBytes('user_a', matter.id, 'photo.png', Buffer.from([1, 2, 3]), options),
+        (error: unknown) => error instanceof WorkspacePathError && error.message === UPLOAD_TYPE_ERROR,
+      )
+      await assert.rejects(
+        writeMatterFileBytes('user_a', matter.id, 'big.pdf', Buffer.alloc(WORKSPACE_MAX_UPLOAD_BYTES + 1, 0x25), options),
+        (error: unknown) => error instanceof WorkspacePathError && error.message === UPLOAD_SIZE_ERROR,
+      )
+      assert.equal(await writeMatterFileBytes('user_b', matter.id, 'stolen.pdf', pdf, options), null)
+
+      const matterDir = matterWorkspaceDir('user_a', matter.id, options.env)
+      assert.deepEqual(fs.readdirSync(matterDir).sort(), ['Council-letter.PDF', 'note.md', 'reply.docx'])
+      assert.equal(fs.existsSync(path.join(workspaceRoot(options.env), 'stolen.pdf')), false)
+      assert.equal(fs.existsSync(path.join(workspaceRoot(options.env), 'photo.png')), false)
     })
   })
 
