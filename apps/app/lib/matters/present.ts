@@ -11,7 +11,7 @@ export function toIso(value: unknown): string {
 
 export function matterHistoryDetail(matter: Pick<MatterSummary, 'createdAt'>): string {
   const date = new Date(matter.createdAt)
-  if (Number.isNaN(date.getTime())) return 'Matter'
+  if (Number.isNaN(date.getTime())) return 'Chat'
   const formatted = new Intl.DateTimeFormat('en-GB', {
     day: 'numeric',
     month: 'short',
@@ -96,20 +96,20 @@ export function matterThreadCopy(input: {
 }): { title: string; detail: string } {
   if (!input.title || input.status === 'idle') {
     return {
-      title: 'Start a matter',
+      title: 'Start a chat',
       detail: 'New chat opens a place for what is happening. Write it in your own words. This is not legal advice.',
     }
   }
   if (input.status === 'loading') {
-    return { title: input.title, detail: 'Opening this matter.' }
+    return { title: input.title, detail: 'Opening this chat.' }
   }
   if (input.status === 'error') {
-    return { title: input.title, detail: 'This matter could not be opened.' }
+    return { title: input.title, detail: 'This chat could not be opened.' }
   }
   if (input.messageCount === 0) {
     return {
       title: input.title,
-      detail: 'Write what has happened, in your own words. It stays with this matter. This is not legal advice.',
+      detail: 'Write what has happened, in your own words. It stays with this chat. This is not legal advice.',
     }
   }
   return { title: input.title, detail: '' }
@@ -132,19 +132,19 @@ export function matterObservationCopy(input: {
 }): { detail: string; summary: string | null } {
   if (!input.matterId || input.status === 'idle') {
     return {
-      detail: 'No matter is open. Open a chat to see its summary.',
+      detail: 'No chat is open. Open a chat to see its summary.',
       summary: null,
     }
   }
   if (input.status === 'error') {
-    return { detail: 'This matter could not be opened.', summary: null }
+    return { detail: 'This chat could not be opened.', summary: null }
   }
   if (input.status === 'loading' || !input.observations) {
-    return { detail: 'Loading the summary for this matter…', summary: null }
+    return { detail: 'Loading the summary for this chat…', summary: null }
   }
   const summary = input.observations.summary.trim()
   if (summary) {
-    return { detail: 'This summary is only for the open matter.', summary }
+    return { detail: 'This summary is only for the open chat.', summary }
   }
-  return { detail: 'No summary for this matter yet.', summary: null }
+  return { detail: 'No summary for this chat yet.', summary: null }
 }

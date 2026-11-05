@@ -111,7 +111,7 @@ describe('matter presentation', () => {
 
   it('describes an empty thread as an invite, not as legal advice', () => {
     const idle = matterThreadCopy({ title: null, status: 'idle', messageCount: 0 })
-    assert.equal(idle.title, 'Start a matter')
+    assert.equal(idle.title, 'Start a chat')
     assert.match(idle.detail, /New chat opens a place/)
     assert.match(idle.detail, /not legal advice/i)
     assert.doesNotMatch(idle.detail, /I act for you|solicitor will|we advise/i)
@@ -156,7 +156,7 @@ describe('matter presentation', () => {
     )
     assert.match(
       matterObservationCopy({ matterId: 'm', status: 'ready', observations: { enabled: false, summary: '' } }).detail,
-      /No summary for this matter yet/,
+      /No summary for this chat yet/,
     )
     assert.equal(
       matterObservationCopy({ matterId: 'm', status: 'ready', observations: { enabled: false, summary: '' } }).summary,
@@ -168,7 +168,7 @@ describe('matter presentation', () => {
       observations: { enabled: true, summary: ' Deposit is due Friday. ' },
     })
     assert.equal(shown.summary, 'Deposit is due Friday.')
-    assert.match(shown.detail, /only for the open matter/)
+    assert.match(shown.detail, /only for the open chat/)
     assert.equal(
       matterObservationCopy({
         matterId: 'm',

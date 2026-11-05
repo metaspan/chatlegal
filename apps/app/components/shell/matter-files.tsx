@@ -72,7 +72,7 @@ export function MatterFiles({
 
   return (
     <div className="flex flex-col gap-2" data-matter-workspace>
-      <h2 className="text-sm font-semibold">Files on this matter</h2>
+      <h2 className="text-sm font-semibold">Files on this chat</h2>
       <FileSearch
         href={matterId ? `/api/matters/${encodeURIComponent(matterId)}/index` : null}
         resolved={!matterId}
@@ -113,10 +113,10 @@ export function MatterFiles({
       ) : null}
       {loading ? <p className="text-sm text-muted-foreground">Loading files…</p> : null}
       {!loading && listed.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No files on this matter yet.</p>
+        <p className="text-sm text-muted-foreground">No files on this chat yet.</p>
       ) : null}
       {listed.length > 0 ? (
-        <ul className="flex flex-col gap-2" aria-label="Matter files" data-library-scope="matter">
+        <ul className="flex flex-col gap-2" aria-label="Chat files" data-library-scope="matter">
           {listed.map((file) => (
             <li key={file.name} className="flex items-center justify-between gap-2" data-matter-file={file.name}>
               <span className="truncate text-sm">{file.name}</span>
@@ -148,7 +148,7 @@ export function MatterFiles({
         </ul>
       ) : null}
       {matterId && listed.length > 0 ? (
-        <p className="text-xs text-muted-foreground">Move takes the file off this matter and puts it in your library.</p>
+        <p className="text-xs text-muted-foreground">Move takes the file off this chat and puts it in your library.</p>
       ) : null}
       {showLibrary ? (
         <div className="flex flex-col gap-2 border-t pt-3" data-library-attach>
@@ -172,11 +172,11 @@ export function MatterFiles({
                     type="button"
                     variant="secondary"
                     size="sm"
-                    aria-label={`Add ${file.name} to this matter`}
+                    aria-label={`Add ${file.name} to this chat`}
                     disabled={library.movingName === file.name}
                     onClick={() => void library.attachToMatter(file.name)}
                   >
-                    {library.movingName === file.name && library.movingMode === 'copy' ? 'Adding…' : 'Add to this matter'}
+                    {library.movingName === file.name && library.movingMode === 'copy' ? 'Adding…' : 'Add to this chat'}
                   </Button>
                 </li>
               ))}

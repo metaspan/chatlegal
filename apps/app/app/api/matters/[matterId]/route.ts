@@ -36,7 +36,7 @@ async function readMatterPatch(request: Request): Promise<MatterPatch> {
     patch.title = record.title
   }
   if ('archived' in record) {
-    if (record.archived !== true) throw new MatterRequestError('Archive can only hide a matter.')
+    if (record.archived !== true) throw new MatterRequestError('Archive can only hide a chat.')
     patch.archived = true
   }
   if (patch.title === undefined && patch.archived !== true) {
@@ -50,11 +50,11 @@ export async function GET(_request: Request, context: RouteContext) {
   const { matterId } = await context.params
   try {
     const thread = await getMatterThread(await getMatterStore(), session.userId, matterId)
-    if (!thread) return NextResponse.json({ error: 'Matter not found.' }, { status: 404 })
+    if (!thread) return NextResponse.json({ error: 'Chat not found.' }, { status: 404 })
     return NextResponse.json(thread)
   } catch (error) {
     console.error('open matter failed', error)
-    return NextResponse.json({ error: 'This matter could not be opened.' }, { status: 500 })
+    return NextResponse.json({ error: 'This chat could not be opened.' }, { status: 500 })
   }
 }
 
@@ -70,11 +70,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     const store = await getMatterStore()
     let matter = patch.title !== undefined ? await renameMatter(store, session.userId, matterId, patch.title) : null
     if (patch.title !== undefined && !matter) {
-      return NextResponse.json({ error: 'Matter not found.' }, { status: 404 })
+      return NextResponse.json({ error: 'Chat not found.' }, { status: 404 })
     }
     if (patch.archived) {
       matter = await archiveMatter(store, session.userId, matterId)
-      if (!matter) return NextResponse.json({ error: 'Matter not found.' }, { status: 404 })
+      if (!matter) return NextResponse.json({ error: 'Chat not found.' }, { status: 404 })
     }
     if (!matter) return NextResponse.json({ error: 'Say what to change.' }, { status: 400 })
     return NextResponse.json({ matter })
@@ -83,6 +83,6 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
     console.error('update matter failed', error)
-    return NextResponse.json({ error: 'This matter could not be changed.' }, { status: 500 })
+    return NextResponse.json({ error: 'This chat could not be changed.' }, { status: 500 })
   }
 }

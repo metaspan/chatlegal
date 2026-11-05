@@ -39,7 +39,7 @@ export async function GET() {
     return NextResponse.json({ matters })
   } catch (error) {
     console.error('list matters failed', error)
-    return NextResponse.json({ error: 'Matters could not be loaded.' }, { status: 500 })
+    return NextResponse.json({ error: 'Chats could not be loaded.' }, { status: 500 })
   }
 }
 
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     const matter = await createMatter(store, session.userId, { title })
     const messages = await seedMatterFirstTurn(store, session.userId, matter.id)
     if (!messages) {
-      return NextResponse.json({ error: 'A new matter could not be opened.' }, { status: 500 })
+      return NextResponse.json({ error: 'A new chat could not be opened.' }, { status: 500 })
     }
     return NextResponse.json({ matter, messages }, { status: 201 })
   } catch (error) {
@@ -63,6 +63,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
     console.error('create matter failed', error)
-    return NextResponse.json({ error: 'A new matter could not be opened.' }, { status: 500 })
+    return NextResponse.json({ error: 'A new chat could not be opened.' }, { status: 500 })
   }
 }

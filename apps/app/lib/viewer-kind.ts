@@ -41,15 +41,15 @@ const VIEWER_COPY: Record<ViewerKind, { heading: string; body: string }> = {
   },
   'chat-state': {
     heading: 'Summary',
-    body: 'No matter is open. Open a chat to see its summary.',
+    body: 'No chat is open. Open a chat to see its summary.',
   },
   parties: {
     heading: 'People',
-    body: 'People in this matter are not stored yet.',
+    body: 'People in this chat are not stored yet.',
   },
   dates: {
     heading: 'Dates',
-    body: 'Dates on this matter come from the chat.',
+    body: 'Dates on this chat come from its messages.',
   },
   status: {
     heading: 'Status',

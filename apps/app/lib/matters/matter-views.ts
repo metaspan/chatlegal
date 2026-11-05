@@ -30,13 +30,13 @@ export function formatMatterStamp(iso: string, withTime: boolean): string | null
 export function partiesViewCopy(matterId: string | null): { detail: string; stub: string | null } {
   if (!matterId) {
     return {
-      detail: 'No matter is open. Open a chat to see who is involved.',
+      detail: 'No chat is open. Open a chat to see who is involved.',
       stub: null,
     }
   }
   return {
-    detail: 'People in this matter are not stored yet.',
-    stub: 'Stub. Names and addresses are not on this matter yet.',
+    detail: 'People in this chat are not stored yet.',
+    stub: 'Stub. Names and addresses are not on this chat yet.',
   }
 }
 
@@ -47,7 +47,7 @@ export function datesViewModel(input: {
 }): { detail: string; rows: MatterViewRow[]; stub: string | null } {
   if (!input.matterId) {
     return {
-      detail: 'No matter is open. Open a chat to see its dates.',
+      detail: 'No chat is open. Open a chat to see its dates.',
       rows: [],
       stub: null,
     }
@@ -67,7 +67,7 @@ export function datesViewModel(input: {
     })
   }
   return {
-    detail: rows.length > 0 ? 'These dates are from this chat.' : 'No dates are stored for this matter yet.',
+    detail: rows.length > 0 ? 'These dates are from this chat.' : 'No dates are stored for this chat yet.',
     rows,
     stub: 'Stub. Dates taken from letters are not stored yet.',
   }
@@ -81,7 +81,7 @@ export function statusViewModel(input: {
 }): { detail: string; rows: MatterViewRow[]; stub: string | null } {
   if (!input.matterId || input.status === 'idle') {
     return {
-      detail: 'No matter is open. Open a chat to see where it stands.',
+      detail: 'No chat is open. Open a chat to see where it stands.',
       rows: [],
       stub: null,
     }

@@ -22,7 +22,7 @@ export async function POST(request: Request, context: RouteContext) {
       role: 'user',
       text,
     })
-    if (!message) return NextResponse.json({ error: 'Matter not found.' }, { status: 404 })
+    if (!message) return NextResponse.json({ error: 'Chat not found.' }, { status: 404 })
     return NextResponse.json({ message }, { status: 201 })
   } catch (error) {
     if (error instanceof MatterMessageError) {

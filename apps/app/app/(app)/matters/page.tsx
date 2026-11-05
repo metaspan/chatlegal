@@ -1,18 +1,8 @@
-import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import { requireConsumerSession } from '@/lib/session-guards'
 
-export const metadata: Metadata = { title: 'Matters' }
-
+/** Old bookmark. The signed-in page is /chats. */
 export default async function MattersPage() {
   await requireConsumerSession()
-
-  return (
-    <section className="flex max-w-prose flex-col gap-2">
-      <h1 className="font-serif text-2xl font-semibold tracking-tight">Matters</h1>
-      <p className="text-muted-foreground">
-        Each matter is one chat. Open it from the list on the left, or start a new chat. A new chat starts with
-        questions. It is not legal advice.
-      </p>
-    </section>
-  )
+  redirect('/chats')
 }

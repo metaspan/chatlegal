@@ -12,7 +12,7 @@ const matter = {
 describe('matter pane views', () => {
   it('labels people as a stub and does not invent names', () => {
     const closed = partiesViewCopy(null)
-    assert.match(closed.detail, /No matter is open/)
+    assert.match(closed.detail, /No chat is open/)
     assert.equal(closed.stub, null)
 
     const open = partiesViewCopy('matter-1')
@@ -45,7 +45,7 @@ describe('matter pane views', () => {
   it('reads chat status and leaves a waiting status as a stub', () => {
     const closed = statusViewModel({ matterId: null, status: 'idle', messageCount: 4, observations: null })
     assert.equal(closed.rows.length, 0)
-    assert.match(closed.detail, /No matter is open/)
+    assert.match(closed.detail, /No chat is open/)
 
     const open = statusViewModel({
       matterId: 'matter-1',

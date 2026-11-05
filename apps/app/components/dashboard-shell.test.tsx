@@ -33,7 +33,7 @@ describe('dashboard shell', () => {
     const chat = renderToStaticMarkup(
       createElement(ChatColumn, {
         title: 'Deposit',
-        detail: 'Write what has happened, in your own words. It stays with this matter. This is not legal advice.',
+        detail: 'Write what has happened, in your own words. It stays with this chat. This is not legal advice.',
         matterId: 'matter-1',
         messages: [
           { id: 'msg-1', role: 'user', text: 'When is the deadline?', createdAt: '2026-11-03T00:00:00.000Z' },
@@ -65,14 +65,14 @@ describe('dashboard shell', () => {
     assert.match(chat, /aria-label="Summary"/)
     assert.match(chat, /data-observation-matter-id="matter-1"/)
     assert.match(chat, /The deposit deadline is Friday\./)
-    assert.match(chat, /only for the open matter/)
+    assert.match(chat, /only for the open chat/)
     assert.match(chat, /draft for this matter/)
     assert.match(chat, /data-slot="composer"/)
     assert.match(chat, /data-slot="model-class"/)
     assert.match(chat, /data-model-class="small"/)
     assert.match(chat, /data-model-id="chatlegal-1"/)
     assert.match(chat, /Small · chatlegal-1/)
-    assert.match(chat, /This stays with this matter/)
+    assert.match(chat, /This stays with this chat/)
     assert.match(chat, />Send</)
     const sendButton = chat.match(/<button type="submit"[^>]*>/)?.[0] ?? ''
     assert.equal(/\sdisabled(?:=|[>\s])/.test(sendButton), false)
@@ -81,7 +81,7 @@ describe('dashboard shell', () => {
 
     const emptyChat = renderToStaticMarkup(
       createElement(ChatColumn, {
-        title: 'Start a matter',
+        title: 'Start a chat',
         detail: 'New chat opens a place for what is happening. Write it in your own words. This is not legal advice.',
         matterId: null,
         messages: [],
@@ -91,7 +91,7 @@ describe('dashboard shell', () => {
       }),
     )
     assert.match(emptyChat, /data-chat-empty/)
-    assert.match(emptyChat, /Start a matter/)
+    assert.match(emptyChat, /Start a chat/)
     assert.match(emptyChat, /not legal advice/i)
     assert.match(emptyChat, />New chat</)
     assert.match(emptyChat, /disabled/)
@@ -179,7 +179,7 @@ describe('dashboard shell', () => {
     assert.match(people, /data-viewer-kind="parties"/)
     assert.match(people, /aria-label="People"/)
     assert.match(people, /data-view-stub="parties"/)
-    assert.match(people, /Stub\. Names and addresses are not on this matter yet\./)
+    assert.match(people, /Stub\. Names and addresses are not on this chat yet\./)
     assert.doesNotMatch(people, /The deposit deadline is Friday/)
     assert.doesNotMatch(people, /claimant|defendant|solicitor/i)
     assert.doesNotMatch(people, /aria-label="Close document"/)
@@ -231,7 +231,7 @@ describe('dashboard shell', () => {
       matterId: 'matter-2',
       observations: { enabled: false, summary: '' },
     })
-    assert.match(emptySummary, /No summary for this matter yet/)
+    assert.match(emptySummary, /No summary for this chat yet/)
     assert.match(emptySummary, /data-observation-enabled="false"/)
     assert.doesNotMatch(emptySummary, /Friday/)
 
@@ -250,12 +250,23 @@ describe('dashboard shell', () => {
     assert.match(history, /History/)
     assert.doesNotMatch(history, /data-library-file|data-matter-file|data-library-scope|Add a file|File name|Move to/)
     assert.doesNotMatch(history, /No files yet/)
-    assert.match(history, /One matter is one chat/)
+    assert.match(history, /Each row is one chat/)
+    assert.match(history, /placeholder="Search chats"/)
     assert.match(history, /Deposit/)
     assert.match(history, /data-matter-id="matter-1"/)
-    assert.match(history, /aria-label="Rename Deposit"/)
-    assert.match(history, /aria-label="Archive Deposit"/)
-    assert.match(history, /Hide from this list/)
+    assert.match(history, /aria-label="Chat actions for Deposit"/)
+    assert.match(history, /aria-haspopup="menu"/)
+    assert.match(history, /aria-expanded="false"/)
+    assert.match(history, /type="button"/)
+    assert.doesNotMatch(history, /aria-label="Rename Deposit"|aria-label="Archive Deposit"/)
+    const historySource = fs.readFileSync(path.join(here, 'shell/history-pane.tsx'), 'utf8')
+    assert.match(historySource, /DropdownMenuItem/)
+    assert.match(historySource, /label="Rename"/)
+    assert.match(historySource, /label="Archive"/)
+    assert.match(historySource, /Hide from this list\. The chat stays saved\./)
+    assert.match(historySource, /dcolley\/tourbillon@7a8595b/)
+    assert.match(historySource, /dropdown-menu\.tsx/)
+    assert.doesNotMatch(historySource, /framer-motion/)
     assert.doesNotMatch(history, /data-matters-empty/)
     assert.doesNotMatch(history, /Chat title|Matter title|Placeholder/)
     assertPlanCard(history)
@@ -267,14 +278,14 @@ describe('dashboard shell', () => {
     assert.match(libraryLink, />Library</)
 
     const emptyHistory = renderToStaticMarkup(createElement(HistoryPane, historyProps()))
-    assert.match(emptyHistory, /No matters yet/)
+    assert.match(emptyHistory, /No chats yet/)
     assert.match(emptyHistory, /data-matters-empty/)
     assert.match(emptyHistory, /data-empty-new-chat/)
     const emptyCta = emptyHistory.slice(emptyHistory.indexOf('data-matters-empty'), emptyHistory.indexOf('data-plan-footer'))
     assert.match(emptyCta, />New chat</)
     assert.match(emptyHistory, /href="\/library"/)
     assertPlanCard(emptyHistory)
-    assert.ok(emptyHistory.indexOf('data-plan-footer') > emptyHistory.indexOf('No matters yet'))
+    assert.ok(emptyHistory.indexOf('data-plan-footer') > emptyHistory.indexOf('No chats yet'))
     assert.doesNotMatch(emptyHistory, /No files yet|Open a matter to see its files|Add a file/)
 
     const missed = renderToStaticMarkup(
@@ -284,17 +295,17 @@ describe('dashboard shell', () => {
         matters: [{ id: 'matter-1', title: 'Deposit', detail: 'Opened 3 Nov 2026' }],
       }),
     )
-    assert.match(missed, /No matters match that search/)
+    assert.match(missed, /No chats match that search/)
     assert.doesNotMatch(missed, /data-matters-empty/)
 
     const failedHistory = renderToStaticMarkup(
       createElement(HistoryPane, {
         ...historyProps(),
-        listError: 'Matters could not be loaded.',
+        listError: 'Chats could not be loaded.',
       }),
     )
-    assert.match(failedHistory, /Matters could not be loaded/)
-    assert.doesNotMatch(failedHistory, /No matters yet/)
+    assert.match(failedHistory, /Chats could not be loaded/)
+    assert.doesNotMatch(failedHistory, /No chats yet/)
 
     const disclaimer = renderToStaticMarkup(createElement(DisclaimerBar))
     assert.match(disclaimer, /Not a solicitor\. Not legal advice\./)

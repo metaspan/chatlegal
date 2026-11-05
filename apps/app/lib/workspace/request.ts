@@ -105,16 +105,16 @@ function readTransferMode(value: unknown): WorkspaceTransferMode {
 
 function readScope(value: unknown, label: string): WorkspaceScope {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new WorkspaceRequestError(`${label} must say library or matter.`)
+    throw new WorkspaceRequestError(`${label} must say library or chat.`)
   }
   const kind = (value as { kind?: unknown }).kind
   if (kind === 'user') return { kind: 'user' }
   if (kind === 'matter') {
     const matterId = (value as { matterId?: unknown }).matterId
     if (typeof matterId !== 'string' || !matterId.trim()) {
-      throw new WorkspaceRequestError('A matter id is required.')
+      throw new WorkspaceRequestError('A chat id is required.')
     }
     return { kind: 'matter', matterId: matterId.trim() }
   }
-  throw new WorkspaceRequestError(`${label} must be the library or a matter.`)
+  throw new WorkspaceRequestError(`${label} must be the library or a chat.`)
 }

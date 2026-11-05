@@ -2,26 +2,37 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Library, PanelLeftClose, Plus, Search } from 'lucide-react'
+import { EllipsisVertical, Library, PanelLeftClose, Plus, Search } from 'lucide-react'
 import { PlanUsageCard } from '@/components/shell/plan-usage-card'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { filterMatterHistory, type MatterHistoryRow } from '@/lib/matters/filter'
 import { cn } from '@/lib/utils'
 
 /**
- * Left pane: search, a new chat, a link to the user library, and matter history.
+ * Left pane: search, a new chat, a link to the user library, and chat history.
  * List chrome adapted from dcolley/tourbillon@7a8595b
  * apps/web/components/assistant/sidebar.tsx (row, muted detail, active inset).
- * That sidebar is an agent rail and does not rename or archive threads, so
- * those actions are added here. Collapse is the existing pane control.
- * The Library control is a nav link only, in the shape of the sidebar item in
- * hitly-net/hitly@94b2e92 apps/app/components/app-sidebar.tsx (icon, label, href).
+ * That sidebar is an agent rail and does not rename or archive threads.
+ * Row actions use the menu primitive adapted from
+ * dcolley/tourbillon@7a8595b apps/web/components/ui/dropdown-menu.tsx
+ * (button trigger, menu popup, keyboard from Base UI: arrows, Enter, Escape).
+ * hitly-net/hitly@94b2e92 apps/app/components/app-sidebar.tsx is a nav link
+ * (icon, label, href), which is the Library control here, not a row menu.
+ * No motion library is added.
+ * Collapse is the existing pane control.
  * File lists and the add form live on /library, not in this pane.
- * Each row is one matter, which is one chat thread.
- * Archive hides a row. The thread stays stored. Show archived is a later slice.
+ * Each row is one chat. Archive hides a row. The thread stays stored.
+ * Show archived is a later slice.
  * The plan card is pinned under the list so it stays in view while history scrolls.
+ * The shell ignores Escape while focus is inside a menu, so the menu closes first.
  */
 export function HistoryPane({
   query,
@@ -109,7 +120,7 @@ export function HistoryPane({
             id="chat-search"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Search matters"
+            placeholder="Search chats"
             className="pl-8"
           />
         </div>
@@ -143,17 +154,17 @@ export function HistoryPane({
       </nav>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
         <h2 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">History</h2>
-        <p className="px-1 pt-1 text-xs text-muted-foreground">One matter is one chat.</p>
+        <p className="px-1 pt-1 text-xs text-muted-foreground">Each row is one chat.</p>
         {listError ? (
           <p role="alert" className="mt-3 px-1 text-xs text-muted-foreground">
             {listError}
           </p>
         ) : null}
         {!loaded ? (
-          <p className="mt-3 px-1 text-xs text-muted-foreground">Loading matters…</p>
+          <p className="mt-3 px-1 text-xs text-muted-foreground">Loading chats…</p>
         ) : empty ? (
           <div data-matters-empty="" className="mt-3 px-1">
-            <p className="text-xs text-muted-foreground">No matters yet. New chat opens one.</p>
+            <p className="text-xs text-muted-foreground">No chats yet. New chat opens one.</p>
             <Button
               type="button"
               variant="outline"
@@ -170,10 +181,10 @@ export function HistoryPane({
           </div>
         ) : visible.length === 0 ? (
           listError ? null : (
-            <p className="mt-3 px-1 text-xs text-muted-foreground">No matters match that search.</p>
+            <p className="mt-3 px-1 text-xs text-muted-foreground">No chats match that search.</p>
           )
         ) : (
-          <ul className="mt-3 flex flex-col gap-1" aria-label="Matters">
+          <ul className="mt-3 flex flex-col gap-1" aria-label="Chat history">
             {visible.map((item) => (
               <HistoryRow
                 key={item.id}
@@ -279,34 +290,40 @@ function HistoryRow({
   }
 
   return (
-    <li className={cn('rounded-lg', active && 'bg-sidebar-accent shadow-[inset_3px_0_0_var(--chrome)]')}>
+    <li className={cn('flex items-start rounded-lg', active && 'bg-sidebar-accent shadow-[inset_3px_0_0_var(--chrome)]')}>
       <button
         type="button"
         data-matter-id={item.id}
         aria-current={active ? 'true' : undefined}
         onClick={() => onSelect(item.id)}
-        className="w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-sidebar-accent"
+        className="min-w-0 flex-1 rounded-lg px-2 py-2 text-left text-sm hover:bg-sidebar-accent"
       >
         <span className="block truncate font-medium">{item.title}</span>
         <span className="block truncate text-xs text-muted-foreground">{item.detail}</span>
       </button>
-      <div className="flex gap-1 px-1 pb-1">
-        <Button type="button" variant="ghost" size="xs" aria-label={`Rename ${item.title}`} onClick={onStartRename}>
-          Rename
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="xs"
-          aria-label={`Archive ${item.title}`}
-          title="Hide from this list. The matter stays saved."
-          onClick={onArchive}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label={`Chat actions for ${item.title}`}
+          className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'mt-1 mr-1 shrink-0 text-muted-foreground')}
           disabled={archiving}
-          aria-busy={archiving}
+          aria-busy={archiving || undefined}
         >
-          Archive
-        </Button>
-      </div>
+          <EllipsisVertical aria-hidden="true" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem label="Rename" disabled={archiving} onClick={onStartRename}>
+            Rename
+          </DropdownMenuItem>
+          <DropdownMenuItem label="Archive" disabled={archiving} onClick={onArchive}>
+            <span className="flex flex-col items-start gap-0.5 py-0.5">
+              <span>Archive</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                Hide from this list. The chat stays saved.
+              </span>
+            </span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </li>
   )
 }

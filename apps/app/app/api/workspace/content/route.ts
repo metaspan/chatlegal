@@ -20,10 +20,10 @@ function readContentQuery(request: Request): ContentQuery {
   if (scope === 'user') return { name, scope: 'user' }
   if (scope === 'matter') {
     const matterId = url.searchParams.get('matterId')?.trim() ?? ''
-    if (!matterId) throw new WorkspaceRequestError('A matter id is required.')
+    if (!matterId) throw new WorkspaceRequestError('A chat id is required.')
     return { name, scope: 'matter', matterId }
   }
-  throw new WorkspaceRequestError('Say whether the file is in the library or a matter.')
+  throw new WorkspaceRequestError('Say whether the file is in the library or a chat.')
 }
 
 function fileResponse(name: string, bytes: Buffer): NextResponse {
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
     const bytes = await readMatterFileBytes(session.userId, query.matterId, query.name)
     if (!bytes) {
       const owned = await userOwnsMatter(await getMatterStore(), session.userId, query.matterId)
-      if (!owned) return NextResponse.json({ error: 'Matter not found.' }, { status: 404 })
+      if (!owned) return NextResponse.json({ error: 'Chat not found.' }, { status: 404 })
       return NextResponse.json({ error: 'File not found.' }, { status: 404 })
     }
     return fileResponse(query.name, bytes)

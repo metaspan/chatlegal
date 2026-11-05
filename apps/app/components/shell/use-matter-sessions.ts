@@ -88,7 +88,7 @@ export function useMatterSessions() {
         setListError(null)
         if (!activeIdRef.current && body.matters[0]) choose(body.matters[0].id)
       } catch {
-        if (!cancelled) setListError('Matters could not be loaded.')
+        if (!cancelled) setListError('Chats could not be loaded.')
       } finally {
         if (!cancelled) setLoaded(true)
       }
@@ -128,7 +128,7 @@ export function useMatterSessions() {
       } catch {
         if (!cancelled && activeIdRef.current === matterId) {
           setThread(null)
-          setThreadError('This matter could not be opened.')
+          setThreadError('This chat could not be opened.')
         }
       }
     }
@@ -321,7 +321,7 @@ export function useMatterSessions() {
       })
       const body = (await response.json().catch(() => null)) as { matter?: unknown; error?: unknown } | null
       if (!response.ok || !isMatterSummary(body?.matter) || body.matter.id !== id) {
-        const message = body && typeof body.error === 'string' && body.error.trim() ? body.error : 'This matter could not be archived.'
+        const message = body && typeof body.error === 'string' && body.error.trim() ? body.error : 'This chat could not be archived.'
         setListError(message)
         return { ok: false, message }
       }
@@ -345,8 +345,8 @@ export function useMatterSessions() {
       }
       return { ok: true }
     } catch {
-      setListError('This matter could not be archived.')
-      return { ok: false, message: 'This matter could not be archived.' }
+      setListError('This chat could not be archived.')
+      return { ok: false, message: 'This chat could not be archived.' }
     } finally {
       setArchivingId((current) => (current === id ? null : current))
     }
@@ -369,7 +369,7 @@ export function useMatterSessions() {
       setMatters((current) => [matter, ...current.filter((item) => item.id !== matter.id)])
       choose(matter.id, { matter, messages: opened.messages, observations: null })
     } catch {
-      setListError('A new matter could not be opened.')
+      setListError('A new chat could not be opened.')
     } finally {
       setCreating(false)
     }
