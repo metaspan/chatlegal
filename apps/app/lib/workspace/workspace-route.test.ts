@@ -105,7 +105,7 @@ describe('workspace routes', () => {
         })
         assert.equal(hidden.status, 404)
         const hiddenText = await hidden.text()
-        assert.match(hiddenText, /Matter not found/)
+        assert.match(hiddenText, /Chat not found/)
         assert.doesNotMatch(hiddenText, /secret\.txt|other user secret text|Secret matter/)
 
         const stolen = await move.POST(
@@ -120,7 +120,7 @@ describe('workspace routes', () => {
         )
         assert.equal(stolen.status, 404)
         const stolenText = await stolen.text()
-        assert.match(stolenText, /Matter not found/)
+        assert.match(stolenText, /Chat not found/)
         assert.doesNotMatch(stolenText, /other user secret text/)
         assert.equal(await readUserFile('user_test', 'secret.txt'), null)
         assert.equal(await readMatterFile('user_b', other.id, 'secret.txt'), 'other user secret text')
@@ -232,7 +232,7 @@ describe('workspace routes', () => {
           { params: Promise.resolve({ matterId: other.id }) },
         )
         assert.equal(stolenUpload.status, 404)
-        assert.match(await stolenUpload.text(), /Matter not found/)
+        assert.match(await stolenUpload.text(), /Chat not found/)
         assert.equal(await readMatterFileBytes('user_b', other.id, 'notice.pdf'), null)
         assert.equal(fs.existsSync(path.join(dir, 'workspace', 'notice.pdf')), false)
 

@@ -108,7 +108,7 @@ function queueLabel(state: QueuedState): string {
 
 function hint(state: ComposerState, threadStatus: MatterThreadStatus): string {
   if (!state.matterId) return 'Start a new chat to write here.'
-  if (threadStatus === 'loading') return 'Opening this matter.'
+  if (threadStatus === 'loading') return 'Opening this chat.'
   if (state.connection === 'offline') return "You're offline. This stays here and sends when the connection returns."
   if (state.submitting && state.connection === 'online') return 'Saving this message.'
   if (state.submitting) return 'Sending again…'
@@ -116,7 +116,7 @@ function hint(state: ComposerState, threadStatus: MatterThreadStatus): string {
     return 'Not saved yet. It will send when the connection returns.'
   }
   if (state.queue.length > 0) return 'Waiting to send.'
-  return 'Enter sends. Shift and Enter starts a new line. This stays with this matter.'
+  return 'Enter sends. Shift and Enter starts a new line. This stays with this chat.'
 }
 
 export function ComposerView({

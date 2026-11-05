@@ -63,7 +63,7 @@ describe('open matter route', () => {
       })
       assert.equal(missing.status, 404)
       const hidden = await missing.text()
-      assert.match(hidden, /Matter not found/)
+      assert.match(hidden, /Chat not found/)
       assert.doesNotMatch(hidden, /Secret matter|parking fine/)
     } finally {
       await disconnectMatterStore()

@@ -41,7 +41,7 @@ describe('signed-in pages guard the session', () => {
 
   it('covers the home, library, matters, and work routes', () => {
     const rels = pages.map((file) => path.relative(signedInDir, file)).sort()
-    assert.deepEqual(rels, ['layout.tsx', 'library/page.tsx', 'matters/page.tsx', 'page.tsx', 'work/page.tsx'])
+    assert.deepEqual(rels, ['chats/page.tsx', 'layout.tsx', 'library/page.tsx', 'matters/page.tsx', 'page.tsx', 'work/page.tsx'])
   })
 
   for (const file of pages) {

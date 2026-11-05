@@ -20,6 +20,9 @@ const nextConfig: NextConfig = {
     // The upload route still refuses anything over 10 MB of file bytes.
     proxyClientMaxBodySize: '12mb',
   },
+  async redirects() {
+    return [{ source: '/matters', destination: '/chats', permanent: false }]
+  },
 }
 
 export default nextConfig

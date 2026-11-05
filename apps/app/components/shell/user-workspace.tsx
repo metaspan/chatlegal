@@ -181,11 +181,11 @@ export function UserWorkspace({
                     type="button"
                     variant="secondary"
                     size="sm"
-                    aria-label={`Add ${selected.name} to this matter`}
+                    aria-label={`Add ${selected.name} to this chat`}
                     disabled={library.movingName === selected.name}
                     onClick={() => void library.attachToMatter(selected.name)}
                   >
-                    {library.movingName === selected.name && library.movingMode === 'copy' ? 'Adding…' : 'Add to this matter'}
+                    {library.movingName === selected.name && library.movingMode === 'copy' ? 'Adding…' : 'Add to this chat'}
                   </Button>
                 ) : null}
                 {matterId ? (
@@ -193,20 +193,20 @@ export function UserWorkspace({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    aria-label={`Move ${selected.name} to this matter`}
+                    aria-label={`Move ${selected.name} to this chat`}
                     disabled={library.movingName === selected.name}
                     onClick={() => void library.moveToMatter(selected.name)}
                   >
-                    {library.movingName === selected.name && library.movingMode === 'move' ? 'Moving…' : 'Move to this matter'}
+                    {library.movingName === selected.name && library.movingMode === 'move' ? 'Moving…' : 'Move to this chat'}
                   </Button>
                 ) : null}
               </div>
               {matterId ? (
                 <p className="text-xs text-muted-foreground">
-                  Add keeps this file in your library and puts a copy on the open matter. Move takes it off your library.
+                  Add keeps this file in your library and puts a copy on the open chat. Move takes it off your library.
                 </p>
               ) : (
-                <p className="text-xs text-muted-foreground">Open a chat to add this file to a matter.</p>
+                <p className="text-xs text-muted-foreground">Open a chat to add this file to it.</p>
               )}
               {library.matterError ? (
                 <p role="alert" className="text-sm text-muted-foreground">

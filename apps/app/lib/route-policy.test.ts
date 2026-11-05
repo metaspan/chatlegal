@@ -34,6 +34,7 @@ describe('Consumer route gate', () => {
       '/',
       '/library',
       '/matters',
+      '/chats',
       '/work',
       '/work/later',
       '/api/matters',
@@ -47,7 +48,19 @@ describe('Consumer route gate', () => {
     ]) {
       await protectSignedInRoute(pathname, auth)
     }
-    assert.equal(calls.length, 13)
+    assert.equal(calls.length, 14)
+  })
+
+  it('sends the old /matters bookmark to /chats', () => {
+    const page = fs.readFileSync(path.join(appDir, 'app/(app)/matters/page.tsx'), 'utf8')
+    const chats = fs.readFileSync(path.join(appDir, 'app/(app)/chats/page.tsx'), 'utf8')
+    const config = fs.readFileSync(path.join(appDir, 'next.config.ts'), 'utf8')
+    assert.match(page, /requireConsumerSession/)
+    assert.match(page, /redirect\('\/chats'\)/)
+    assert.match(chats, />Chats</)
+    assert.doesNotMatch(chats, /matter/i)
+    assert.match(config, /source: '\/matters'/)
+    assert.match(config, /destination: '\/chats'/)
   })
 
   it('wires clerkMiddleware to the route gate and keeps the Frontend API matcher', () => {

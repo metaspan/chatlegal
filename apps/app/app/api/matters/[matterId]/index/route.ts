@@ -18,7 +18,7 @@ export async function GET(request: Request, context: RouteContext) {
   const { matterId } = await context.params
   try {
     const body = await readIndex(session.userId, { kind: 'matter', matterId }, request)
-    if (!body) return NextResponse.json({ error: 'Matter not found.' }, { status: 404 })
+    if (!body) return NextResponse.json({ error: 'Chat not found.' }, { status: 404 })
     return NextResponse.json(body)
   } catch (error) {
     return indexErrorResponse(error)
@@ -30,7 +30,7 @@ export async function POST(request: Request, context: RouteContext) {
   const { matterId } = await context.params
   try {
     const body = await prepareIndex(session.userId, { kind: 'matter', matterId }, request)
-    if (!body) return NextResponse.json({ error: 'Matter not found.' }, { status: 404 })
+    if (!body) return NextResponse.json({ error: 'Chat not found.' }, { status: 404 })
     return NextResponse.json(body)
   } catch (error) {
     return indexErrorResponse(error)

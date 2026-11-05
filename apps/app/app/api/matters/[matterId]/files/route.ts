@@ -14,10 +14,10 @@ export async function GET(_request: Request, context: RouteContext) {
   const { matterId } = await context.params
   try {
     const files = await listMatterFiles(session.userId, matterId)
-    if (!files) return NextResponse.json({ error: 'Matter not found.' }, { status: 404 })
+    if (!files) return NextResponse.json({ error: 'Chat not found.' }, { status: 404 })
     return NextResponse.json({ files })
   } catch (error) {
-    return workspaceErrorResponse(error, 'Files for this matter could not be loaded.')
+    return workspaceErrorResponse(error, 'Files for this chat could not be loaded.')
   }
 }
 
@@ -33,14 +33,14 @@ export async function POST(request: Request, context: RouteContext) {
     if (isMultipart(request)) {
       const upload = await readMatterUpload(request)
       const file = await writeMatterFileBytes(session.userId, matterId, upload.name, upload.bytes)
-      if (!file) return NextResponse.json({ error: 'Matter not found.' }, { status: 404 })
+      if (!file) return NextResponse.json({ error: 'Chat not found.' }, { status: 404 })
       return NextResponse.json({ file }, { status: 201 })
     }
     const body = await readJsonObject(request)
     const file = await writeMatterFile(session.userId, matterId, readFileName(body), readFileText(body))
-    if (!file) return NextResponse.json({ error: 'Matter not found.' }, { status: 404 })
+    if (!file) return NextResponse.json({ error: 'Chat not found.' }, { status: 404 })
     return NextResponse.json({ file }, { status: 201 })
   } catch (error) {
-    return workspaceErrorResponse(error, 'The file could not be added to this matter.')
+    return workspaceErrorResponse(error, 'The file could not be added to this chat.')
   }
 }

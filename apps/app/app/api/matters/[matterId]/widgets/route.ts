@@ -21,7 +21,7 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const props = parseAskChoiceProps(parseJsonObject(await request.text(), 'That question is too large.'))
     const message = await appendAskChoice(await getMatterStore(), session.userId, matterId, props)
-    if (!message) return NextResponse.json({ error: 'Matter not found.' }, { status: 404 })
+    if (!message) return NextResponse.json({ error: 'Chat not found.' }, { status: 404 })
     return NextResponse.json({ message: presentStoredMatterMessage(message) }, { status: 201 })
   } catch (error) {
     if (error instanceof MatterWidgetError) {

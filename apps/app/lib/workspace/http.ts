@@ -19,7 +19,7 @@ export function moveErrorResponse(result: Extract<MoveWorkspaceFileResult, { ok:
     return NextResponse.json({ error: 'A file with that name is already there.' }, { status: 409 })
   }
   if (result.reason === 'matter') {
-    return NextResponse.json({ error: 'Matter not found.' }, { status: 404 })
+    return NextResponse.json({ error: 'Chat not found.' }, { status: 404 })
   }
   return NextResponse.json({ error: 'File not found.' }, { status: 404 })
 }

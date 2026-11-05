@@ -99,7 +99,7 @@ describe('workspace content route', () => {
         )
         assert.equal(hidden.status, 404)
         const hiddenText = await hidden.text()
-        assert.match(hiddenText, /Matter not found/)
+        assert.match(hiddenText, /Chat not found/)
         assert.doesNotMatch(hiddenText, /other user secret text|secret\.txt/)
 
         const escape = await content.GET(

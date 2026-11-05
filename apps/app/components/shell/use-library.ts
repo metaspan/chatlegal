@@ -59,16 +59,16 @@ export function useLibrary(matterId: string | null, seed?: LibrarySeed) {
     const response = await fetch(`/api/matters/${encodeURIComponent(id)}/files`, { cache: 'no-store' })
     if (response.status === 404) {
       setMatterFiles([])
-      setMatterError('This matter could not be opened.')
+      setMatterError('This chat could not be opened.')
       return false
     }
     if (!response.ok) {
-      setMatterError(await errorText(response, 'Files for this matter could not be loaded.'))
+      setMatterError(await errorText(response, 'Files for this chat could not be loaded.'))
       return false
     }
     const parsed = workspaceFilesFromJson(await response.json())
     if (!parsed) {
-      setMatterError('Files for this matter could not be loaded.')
+      setMatterError('Files for this chat could not be loaded.')
       return false
     }
     setMatterFiles(parsed)
@@ -121,7 +121,7 @@ export function useLibrary(matterId: string | null, seed?: LibrarySeed) {
       } catch {
         if (!cancelled) {
           setMatterFiles([])
-          setMatterError('Files for this matter could not be loaded.')
+          setMatterError('Files for this chat could not be loaded.')
         }
       } finally {
         if (!cancelled) setMatterLoaded(true)
@@ -146,13 +146,13 @@ export function useLibrary(matterId: string | null, seed?: LibrarySeed) {
         cache: 'no-store',
       })
       if (!response.ok) {
-        setMatterError(await errorText(response, 'The file could not be added to this matter.'))
+        setMatterError(await errorText(response, 'The file could not be added to this chat.'))
         return false
       }
       if (matterId) return await reloadMatter(matterId)
       return true
     } catch {
-      setMatterError('The file could not be added to this matter.')
+      setMatterError('The file could not be added to this chat.')
       return false
     } finally {
       setUploading(false)
@@ -193,7 +193,7 @@ export function useLibrary(matterId: string | null, seed?: LibrarySeed) {
     setError(null)
     setMatterError(null)
     const toMatter = to.kind === 'matter'
-    const fallback = mode === 'copy' ? 'The file could not be added to this matter.' : 'The file could not be moved.'
+    const fallback = mode === 'copy' ? 'The file could not be added to this chat.' : 'The file could not be moved.'
     try {
       const response = await fetch('/api/workspace/move', {
         method: 'POST',

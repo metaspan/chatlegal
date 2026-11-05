@@ -140,14 +140,14 @@ export function firstTurnPapersNote(choiceIds: readonly string[]): string | null
   const u = FIRST_TURN_URLS
   if (choiceIds.includes('court-papers')) {
     return labelled(
-      `Court papers are noted on this matter. If a date on them is soon, use ${u.possession} or ${u.legalAidFinder} or ${u.moneyClaim} before you write more. Then say what happened, in your own words. This is not legal advice.`,
+      `Court papers are noted on this chat. If a date on them is soon, use ${u.possession} or ${u.legalAidFinder} or ${u.moneyClaim} before you write more. Then say what happened, in your own words. This is not legal advice.`,
     )
   }
   if (choiceIds.length === 1 && choiceIds[0] === 'nothing-yet') {
     return labelled('Nothing on paper yet is fine. Write what happened, in your own words. This is not legal advice.')
   }
   return labelled(
-    'Those papers are noted on this matter. Write what happened, and what they say, in your own words. Leave out passwords and card numbers. This is not legal advice.',
+    'Those papers are noted on this chat. Write what happened, and what they say, in your own words. Leave out passwords and card numbers. This is not legal advice.',
   )
 }
 

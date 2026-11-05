@@ -44,7 +44,7 @@ describe('matter message route', () => {
         }), { params: Promise.resolve({ matterId: other.id }) })
         assert.equal(missing.status, 404)
         const hidden = await missing.text()
-        assert.match(hidden, /Matter not found/)
+        assert.match(hidden, /Chat not found/)
         assert.doesNotMatch(hidden, /Secret matter/)
         assert.deepEqual((await getMatterThread(store, 'user_b', other.id))?.messages, [])
 

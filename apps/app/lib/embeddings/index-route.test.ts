@@ -83,7 +83,7 @@ describe('embedding routes', () => {
         })
         assert.equal(hidden.status, 404)
         const hiddenText = await hidden.text()
-        assert.match(hiddenText, /Matter not found/)
+        assert.match(hiddenText, /Chat not found/)
         assert.doesNotMatch(hiddenText, /betasecrettoken|secret\.md|Secret matter/)
         assert.equal(fetched, 0)
         assert.equal(fs.existsSync(path.join(dir, 'workspace', 'users', 'user_test', 'index')), false)
