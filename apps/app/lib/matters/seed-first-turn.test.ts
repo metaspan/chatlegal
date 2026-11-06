@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url'
 import { withProcessEnvLock } from '../process-env-lock.ts'
 import { parseAskChoiceProps } from './ask-choice.ts'
 import {
-  FIRST_TURN_DISCLOSURE_LABEL,
   FIRST_TURN_PAPERS_QUESTION,
   FIRST_TURN_URLS,
   FIRST_TURN_WHERE_QUESTION,
@@ -72,7 +71,8 @@ describe('seed first turn', () => {
       if (!where.ok) return
       const note = await appendFirstTurnContinuation(store, 'user_a', matter.id, where.message)
       assert.match(note?.text ?? '', /https:\/\/www\.mygov\.scot\//)
-      assert.match(note?.text ?? '', new RegExp(FIRST_TURN_DISCLOSURE_LABEL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+      // C-13: templated notes no longer lead with the AI-generated label; the footer owns it.
+      assert.doesNotMatch(note?.text ?? '', /AI-generated information/)
       assert.match(note?.text ?? '', /This is not legal advice/)
       const again = await appendFirstTurnContinuation(store, 'user_a', matter.id, where.message)
       assert.equal(again?.id, note?.id)
@@ -149,7 +149,8 @@ describe('create matter route', () => {
         const saved = (await answered.json()) as { followUp?: { text?: string }; message?: { widget?: { answer?: { choice?: string } } } }
         assert.equal(saved.message?.widget?.answer?.choice, 'wales')
         assert.match(saved.followUp?.text ?? '', /https:\/\/www\.gov\.wales\//)
-        assert.match(saved.followUp?.text ?? '', /AI-generated information/)
+        // C-13: the follow-up carries no AI-generated lead-in; the sticky footer owns the label.
+        assert.doesNotMatch(saved.followUp?.text ?? '', /AI-generated information/)
 
         const source = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../../app/api/matters/route.ts'), 'utf8')
         assert.match(source, /seedMatterFirstTurn/)

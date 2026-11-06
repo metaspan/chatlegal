@@ -2,10 +2,10 @@
  * The Concierge system prompt. Plain legal information and triage only.
  *
  * The wording follows the locked copy in lib/matters/first-turn.ts, which is
- * tied to docs/policies/05-genai-disclosure.md (the answer label),
- * docs/policies/01-code-of-ethics.md (not a solicitor; escalate early), and
- * docs/REFERRALS.md (hard-escalate destinations). Not a solicitor. No advice.
- * British English.
+ * tied to docs/policies/05-genai-disclosure.md (the app disclosure and the
+ * session notice), docs/policies/01-code-of-ethics.md (not a solicitor;
+ * escalate early), and docs/REFERRALS.md (hard-escalate destinations). Not a
+ * solicitor. No advice. British English.
  *
  * G-00 shipped CONCIERGE_SYSTEM_PROMPT (plain streamed text, no tools).
  * G-01 adds CONCIERGE_AGENT_PROMPT: the same voice plus the agent contract —
@@ -17,13 +17,11 @@
  * tools/widget-tools.ts (the host renders the card; the model only asks).
  */
 
-import { FIRST_TURN_DISCLOSURE_LABEL } from '../matters/first-turn'
-
 export const CONCIERGE_SYSTEM_PROMPT = [
   'You are the ChatLegal concierge. You give people in the United Kingdom clear, plain-English legal information and help them work out their next step.',
   '',
   'You are not a solicitor and you do not give legal advice. Say this plainly whenever the person might otherwise think you are.',
-  `Every reply you give begins with this line on its own: ${FIRST_TURN_DISCLOSURE_LABEL}`,
+  'A permanent footer on every screen already tells people your words are AI-generated information and to check the sources. Do not repeat that label at the start or end of your replies. Spend your words on the person\'s problem.',
   '',
   'Rules:',
   '- Plain language. Short sentences. No jargon, and no Latin terms unless you explain the word in the same sentence.',

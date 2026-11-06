@@ -308,6 +308,9 @@ describe('dashboard shell', () => {
     assert.doesNotMatch(failedHistory, /No chats yet/)
 
     const disclaimer = renderToStaticMarkup(createElement(DisclaimerBar))
+    // C-13: the sticky app-shell footer owns the AI-generated label.
+    assert.match(disclaimer, /data-disclosure-footer/)
+    assert.match(disclaimer, /AI-generated information — check the sources\./)
     assert.match(disclaimer, /Not a solicitor\. Not legal advice\./)
     assert.match(disclaimer, /lang="cy"/)
     assert.doesNotMatch(chat + viewer + history + disclaimer, /I act for you/)
@@ -417,6 +420,21 @@ describe('dashboard shell', () => {
     assert.match(sessions, /archived: true/)
     assert.match(shell, /optimistic: false/)
     assert.match(fs.readFileSync(path.join(here, 'chat/composer/composer-controller.ts'), 'utf8'), /flushQueue/)
+    // C-15: the transcript scroll binding is attached to the scroller with a jump control.
+    const chatColumn = fs.readFileSync(path.join(here, 'chat/chat-column.tsx'), 'utf8')
+    assert.match(chatColumn, /useTranscriptScroll\(matterId, messages\)/)
+    assert.match(chatColumn, /ref=\{scroller\.ref\}/)
+    assert.match(chatColumn, /onScroll=\{scroller\.onScroll\}/)
+    assert.match(chatColumn, /data-scroll-to-bottom/)
+    assert.match(chatColumn, /aria-label="Scroll to bottom"/)
+    assert.match(chatColumn, /onClick=\{scroller\.jumpToBottom\}/)
+    const scrollHook = fs.readFileSync(path.join(here, 'chat/use-transcript-scroll.ts'), 'utf8')
+    assert.match(scrollHook, /nextTranscriptScroll/)
+    assert.match(scrollHook, /data-message-role="user"/)
+    // C-14: assistant rows render markdown; user rows stay verbatim LinkedText.
+    const messageList = fs.readFileSync(path.join(here, 'chat/message-list.tsx'), 'utf8')
+    assert.match(messageList, /<ChatMarkdown text=\{message\.text\} \/>/)
+    assert.match(messageList, /<LinkedText text=\{message\.text\} \/>/)
     assert.match(shell, /sendMessage/)
     assert.match(shell, /answerWidget/)
     assert.match(shell, /onSend=/)
