@@ -47,6 +47,11 @@ See [`.env.example`](.env.example).
 | `CHATLEGAL_EMBED_ENABLED` | Optional. The word `true` turns on prepared search for library and matter files. Anything else, including unset, leaves it off |
 | `CHATLEGAL_EMBED_MODEL` | Required when prepared search is on. The model id sent to the embeddings endpoint. If this is empty, search stays off |
 | `CHATLEGAL_EMBED_BASE_URL` | Required when prepared search is on. An `http` or `https` embeddings URL, for example `http://127.0.0.1:11434/v1`. A password or query string in the URL is refused. No provider secret is read |
+| `CHATLEGAL_LITELLM_BASE_URL` | Optional. The LiteLLM router base URL, for example `http://192.168.10.181:4000/v1`. The proxy is off unless this and the key are set. A password or query string in the URL is refused |
+| `CHATLEGAL_LITELLM_API_KEY` | Required when the proxy is on. Server-only Bearer key for the router. Out of band. Never a `NEXT_PUBLIC_*` value. Ops sets it in `/opt/chatlegal/app.env` |
+| `CHATLEGAL_CONCIERGE_MODEL` | Optional when the proxy is on. The Concierge model id on the router. Default `chatlegal-concierge` |
+| `CHATLEGAL_TASKRUNNER_MODEL` | Optional when the proxy is on. The TaskRunner model id on the router. Default `chatlegal-taskrunner`. The TaskRunner agent itself is G-02 |
+| `CHATLEGAL_LITELLM_SESSION_HEADER` | Optional. Router stickiness header name. Default `x-litellm-session-id` |
 
 The provider also sets `allowedRedirectOrigins` to `https://app.chatlegal.uk`. In the Clerk Dashboard, allowed origins and redirect URLs are that origin only. Do not add `https://chatlegal.uk`.
 

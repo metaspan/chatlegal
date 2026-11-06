@@ -40,7 +40,14 @@ describe('default model class', () => {
     assert.match(example, /CHATLEGAL_WORKSPACE_ROOT/)
     assert.match(example, /CHATLEGAL_OM_MODEL/)
     assert.doesNotMatch(example, /CHATLEGAL_(SMALL|DEFAULT|CLASS|CHAT)_MODEL/)
-    assert.doesNotMatch(messages, /model-class|chatlegal-1|LiteLLM|litellm/)
+    // G-00: the route may gate on LiteLLM, but it reads no env and names no
+    // model id itself. The label chatlegal-1 and its Concierge resolution
+    // live in lib/llm (config.ts resolveOutboundModelId), not here.
+    assert.doesNotMatch(messages, /process\.env|CHATLEGAL_|chatlegal-1|model-class|generateText|streamText|fetch\(/)
+    assert.match(messages, /isLiteLLMEnabled\(\)/)
+    const litellm = fs.readFileSync(path.join(appDir, 'lib/llm/config.ts'), 'utf8')
+    assert.match(litellm, /CHATLEGAL_LITELLM_BASE_URL/)
+    assert.match(litellm, /chatlegal-1/)
     assert.doesNotMatch(composer, /DropdownMenu|<select|Medium|Large|SOTA|process\.env|fetch\(/)
     assert.doesNotMatch(card, /DropdownMenu|<select|Medium|Large|SOTA|process\.env|fetch\(/)
     assert.match(composer, /data-slot="model-class"/)

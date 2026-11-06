@@ -3,6 +3,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { isSendTimeout, sendAbortSignal } from '@/lib/chat/send-timeout'
 import {
+  isMatterStreamResponse,
+  iterateMatterStreamEvents,
+  messagesWithStreamingAssistant,
+  messagesWithoutMessage,
+} from '@/lib/matters/chat-stream'
+import {
   isStoredMatterMessage,
   messagesAfterReload,
   messagesReplacing,
@@ -30,14 +36,16 @@ type MatterListResponse = { matters?: MatterSummary[] }
  * keeps the open matter and its draft attachment on the client.
  * Send appends the user's words on that matter. A failed or timed-out send
  * returns without dropping the caller's copy; the composer queue keeps it.
- * A model reply is not requested.
+ * When LiteLLM is configured the Concierge reply streams back after the
+ * append (G-00, lib/matters/chat-stream.ts). When it is off no model is
+ * called and the send is only the append.
  * New chat opens the matter on its scripted first turn.
  * Rename stores the title on that thread. Archive hides it from this list
  * and leaves the thread stored. Show archived is a later slice.
  * An askChoice card already on the matter can be answered here. The pick is
  * stored on that same thread. A first-turn card may add a templated note.
- * TODO(G-01 Concierge): stream the assistant reply after the message is stored,
- * and emit askChoice from the model.
+ * TODO(G-01 Concierge): emit askChoice from the model, and add its tools and
+ * protocol packs. The streamed text reply landed with G-00.
  */
 export function useMatterSessions() {
   const [matters, setMatters] = useState<MatterSummary[]>([])
@@ -170,21 +178,7 @@ export function useMatterSessions() {
         return { ...current, messages: messagesWithOptimistic(current.messages, optimistic) }
       })
     }
-    try {
-      const response = await fetch(`/api/matters/${encodeURIComponent(matterId)}/messages`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ text: parsed }),
-        cache: 'no-store',
-        signal: sendAbortSignal(),
-      })
-      if (response.status === 408 || response.status === 504) {
-        throw Object.assign(new Error('timed out'), { name: 'TimeoutError' })
-      }
-      if (!response.ok) throw new Error('send')
-      const body = (await response.json()) as { message?: unknown }
-      if (!isStoredMatterMessage(body.message) || body.message.role !== 'user') throw new Error('send')
-      const saved = presentStoredMatterMessage(body.message)
+    const applySavedUser = (saved: MatterMessage) => {
       setMatters((current) =>
         current
           .map((matter) => (matter.id === matterId ? { ...matter, updatedAt: saved.createdAt } : matter))
@@ -200,6 +194,99 @@ export function useMatterSessions() {
           }
         })
       }
+    }
+    try {
+      const response = await fetch(`/api/matters/${encodeURIComponent(matterId)}/messages`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text: parsed }),
+        cache: 'no-store',
+        signal: sendAbortSignal(),
+      })
+      if (response.status === 408 || response.status === 504) {
+        throw Object.assign(new Error('timed out'), { name: 'TimeoutError' })
+      }
+      if (!response.ok) throw new Error('send')
+      if (isMatterStreamResponse(response)) {
+        // LiteLLM is on: the reply for this send streams as one JSON event
+        // per line. The send counts once the stored user message event
+        // arrives; the assistant reply then fills the pane in the background.
+        const replyId = `local:assistant:${matterId}:${sendSeq.current}`
+        let streamedText = ''
+        let resolveSaved: (saved: boolean) => void = () => {}
+        const savedArrived = new Promise<boolean>((resolve) => {
+          resolveSaved = resolve
+        })
+        const consumeStream = async () => {
+          try {
+            for await (const event of iterateMatterStreamEvents(response)) {
+              if (event.type === 'user') {
+                applySavedUser(presentStoredMatterMessage(event.message))
+                resolveSaved(true)
+                continue
+              }
+              if (activeIdRef.current !== matterId) continue
+              if (event.type === 'delta') {
+                streamedText += event.text
+                const shown = streamedText
+                setThread((current) =>
+                  current && current.matter.id === matterId
+                    ? { ...current, messages: messagesWithStreamingAssistant(current.messages, replyId, shown) }
+                    : current,
+                )
+                continue
+              }
+              if (event.type === 'assistant') {
+                const saved = presentStoredMatterMessage(event.message)
+                setThread((current) =>
+                  current && current.matter.id === matterId
+                    ? {
+                        ...current,
+                        matter: { ...current.matter, updatedAt: saved.createdAt },
+                        messages: messagesWithSaved(current.messages, replyId, saved),
+                      }
+                    : current,
+                )
+                setMatters((current) =>
+                  current
+                    .map((matter) => (matter.id === matterId ? { ...matter, updatedAt: saved.createdAt } : matter))
+                    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id)),
+                )
+                continue
+              }
+              if (event.type === 'error') {
+                setThread((current) =>
+                  current && current.matter.id === matterId
+                    ? { ...current, messages: messagesWithoutMessage(current.messages, replyId) }
+                    : current,
+                )
+                setSendError(event.message)
+              }
+            }
+          } catch {
+            // The stream dropped. The person's own message is already stored
+            // when the user event arrived, so this only clears the partial.
+          }
+          if (activeIdRef.current === matterId) {
+            setThread((current) =>
+              current && current.matter.id === matterId
+                ? { ...current, messages: messagesWithoutMessage(current.messages, replyId) }
+                : current,
+            )
+          }
+          resolveSaved(false)
+        }
+        void consumeStream()
+        const saved = await savedArrived
+        if (!saved) {
+          void response.body?.cancel().catch(() => {})
+          throw new Error('send')
+        }
+        return { ok: true }
+      }
+      const body = (await response.json()) as { message?: unknown }
+      if (!isStoredMatterMessage(body.message) || body.message.role !== 'user') throw new Error('send')
+      applySavedUser(presentStoredMatterMessage(body.message))
       return { ok: true }
     } catch (error) {
       if (optimisticOn && viewing()) {
