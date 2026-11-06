@@ -1,13 +1,17 @@
 /**
- * The G-02 tool surfaces, both sides of the handoff.
+ * The G-02 tool surfaces, both sides of the handoff. G-03 moved the
+ * TaskRunner side onto the real tool bus (lib/task-runner/tool-bus.ts):
+ * the stubs are now bus registrations with typed (Zod) input schemas and a
+ * per-tool timeout, executed through the bus's never-throw path. The public
+ * contract below is unchanged — same names, same JSON results, same
+ * readable-error codes — so the G-02 tests migrate untouched.
  *
- * The TaskRunner side is a deliberately tiny stub set — echo, timed_noop,
- * count_words — so the handoff is real and testable without a tool bus:
- * the model calls, the host executes, the result rides back as a tool
- * message, exactly the way G-01's askChoice call executes host-side in
- * lib/llm/concierge-agent.ts. Everything here is G-03-replaceable: the
- * full tool bus with permissions lands in G-03 and swaps this file out.
- * Nothing touches the filesystem, the network, or another person's data.
+ * The TaskRunner side keeps the G-02 promise: the model calls, the host
+ * executes, the result rides back as a tool message, exactly the way G-01's
+ * askChoice call executes host-side in lib/llm/concierge-agent.ts. A bus
+ * refusal, timeout, or crash inside a tool is a JSON error the model can
+ * read (and the runner folds into its <task-result> path), never a throw:
+ * one bad call must not sink the job, let alone the process.
  *
  * The Concierge side is ONE model-facing function, hand_off_to_task_runner:
  * the model hands over a brief and gets a plain-language summary back, the
@@ -17,12 +21,20 @@
  * trusted: the host re-reads every call and refuses what it cannot run.
  */
 
+import { z } from 'zod'
 import type { ChatToolCall, ChatToolDefinition } from './client'
+import {
+  createToolRegistry,
+  defineTool,
+  executeToolCall,
+  type ToolRegistry,
+  type ToolRunContext,
+} from '../task-runner/tool-bus'
 
-/** Marker: these tools exist to prove the handoff. G-03 replaces them. */
+/** Marker kept from G-02: the stub surface was replaced by the bus in G-03. */
 export const TASK_TOOLS_REPLACED_IN = 'G-03'
 
-/** The stub tools the TaskRunner may call this slice. */
+/** The three starter tools, now registered on the bus (same names OK). */
 export const TASK_STUB_TOOL_NAMES = ['echo', 'timed_noop', 'count_words'] as const
 export type TaskStubToolName = (typeof TASK_STUB_TOOL_NAMES)[number]
 
@@ -39,50 +51,92 @@ const COUNT_MAX_CHARS = 4_000
 const BRIEF_MAX_CHARS = 2_000
 const TITLE_MAX_CHARS = 120
 
+/** Per-tool wall clocks (the bus enforces them; caps below are the tools' own). */
+const ECHO_TIMEOUT_MS = 1_000
+const NOOP_TIMEOUT_MS = 5_000
+const COUNT_TIMEOUT_MS = 1_000
+
+/**
+ * The three starter tools as bus registrations. Descriptions keep the
+ * promise honest: these prove the loop; they are the bus's seed content.
+ * Arguments are untrusted: the schema validates before execute, and every
+ * cap is re-applied there whatever the model was told.
+ */
+const echoTool = defineTool({
+  name: 'echo',
+  description: 'Repeat a short piece of text back. Useful to confirm what you are working with.',
+  timeoutMs: ECHO_TIMEOUT_MS,
+  inputSchema: z.strictObject({
+    message: z.string().min(1).max(ECHO_MAX_CHARS),
+  }),
+  execute: ({ message }) => {
+    const trimmed = message.trim().slice(0, ECHO_MAX_CHARS)
+    if (!trimmed) return { tool: 'echo', error: 'message_required' }
+    return { tool: 'echo', echoed: trimmed }
+  },
+})
+
+const timedNoopTool = defineTool({
+  name: 'timed_noop',
+  description: 'Pause for a short moment. Real background waits come later; this one is capped.',
+  timeoutMs: NOOP_TIMEOUT_MS,
+  inputSchema: z.strictObject({
+    // The cap is enforced by the clamp in execute (the G-02 contract: a
+    // huge pause is clamped, not refused), so the schema only types it.
+    ms: z.number().finite().nonnegative().optional(),
+  }),
+  execute: async ({ ms }, ctx: ToolRunContext) => {
+    // Same contract as G-02: a missing pause is 0, anything huge is
+    // clamped, and the wait goes through the injected sleep (tests never
+    // really sleep).
+    const raw = typeof ms === 'number' && Number.isFinite(ms) ? Math.floor(ms) : 0
+    const waited = Math.max(0, Math.min(NOOP_MAX_MS, raw))
+    await ctx.sleep(waited)
+    return { tool: 'timed_noop', waited_ms: waited }
+  },
+})
+
+const countWordsTool = defineTool({
+  name: 'count_words',
+  description: 'Count the words in a piece of text. Safe: it only counts, it stores nothing.',
+  timeoutMs: COUNT_TIMEOUT_MS,
+  inputSchema: z.strictObject({
+    text: z.string().min(1).max(COUNT_MAX_CHARS),
+  }),
+  execute: ({ text }) => {
+    // Pure computation over the text the model supplied: no I/O, no
+    // storage, no keys — the one "safe local helper" of the slice.
+    const clipped = text.slice(0, COUNT_MAX_CHARS)
+    if (!clipped.trim()) return { tool: 'count_words', error: 'text_required' }
+    const words = clipped.trim().split(/\s+/).length
+    return { tool: 'count_words', words, characters: clipped.length }
+  },
+})
+
+/** Build the TaskRunner's bus: a fresh registry with the starter set on it. */
+export function createTaskToolRegistry(): ToolRegistry {
+  const registry = createToolRegistry()
+  registry.register(echoTool)
+  registry.register(timedNoopTool)
+  registry.register(countWordsTool)
+  return registry
+}
+
+let defaultRegistry: ToolRegistry | null = null
+
+function getDefaultRegistry(): ToolRegistry {
+  if (!defaultRegistry) defaultRegistry = createTaskToolRegistry()
+  return defaultRegistry
+}
+
 /**
  * The three starter tools, in the ChatToolDefinition shape the G-00 client
- * already sends (client.ts, G-01 function calling). Descriptions keep the
- * promise honest: these prove the loop; they are not the real tool bus.
+ * already sends (client.ts, G-01 function calling). G-03: the parameters
+ * are the tools' Zod schemas serialized to plain JSON Schema by the bus
+ * (serializeToolInputSchema, adapted from the pack's tool-schema-serialize).
  */
 export function taskRunnerToolDefinitions(): ChatToolDefinition[] {
-  return [
-    {
-      name: 'echo',
-      description: 'Repeat a short piece of text back. Useful to confirm what you are working with.',
-      parameters: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['message'],
-        properties: {
-          message: { type: 'string', minLength: 1, maxLength: ECHO_MAX_CHARS },
-        },
-      },
-    },
-    {
-      name: 'timed_noop',
-      description: 'Pause for a short moment. Real background waits come later; this one is capped.',
-      parameters: {
-        type: 'object',
-        additionalProperties: false,
-        required: [],
-        properties: {
-          ms: { type: 'integer', minimum: 0, maximum: NOOP_MAX_MS, description: 'How long to pause, in milliseconds.' },
-        },
-      },
-    },
-    {
-      name: 'count_words',
-      description: 'Count the words in a piece of text. Safe: it only counts, it stores nothing.',
-      parameters: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['text'],
-        properties: {
-          text: { type: 'string', minLength: 1, maxLength: COUNT_MAX_CHARS },
-        },
-      },
-    },
-  ]
+  return getDefaultRegistry().definitions()
 }
 
 /** The seams the stubs need, injectable so tests never really sleep. */
@@ -91,52 +145,23 @@ export type TaskToolRunDeps = {
 }
 
 /**
- * Execute one stub tool call host-side and return the tool message content.
- * A call the host cannot run is a JSON error the model can read, never a
- * throw: one bad call must not sink the job. Arguments are untrusted: they
- * are re-read with hard caps here, whatever the model was told.
+ * Execute one worker tool call through the bus and return the tool message
+ * content. Always a JSON string, never a throw: unknown_tool / not_json /
+ * not_an_object / invalid_args / tool_timeout / tool_failed are what the
+ * model reads, and the runner folds them toward the deliverable.
  */
 export async function runTaskRunnerTool(
   name: string,
   argsJson: string,
   deps: TaskToolRunDeps,
 ): Promise<string> {
-  if (!isTaskStubTool(name)) {
-    return JSON.stringify({ tool: name.slice(0, 64), error: 'unknown_tool', note: `This starter set has only ${TASK_STUB_TOOL_NAMES.join(', ')}. ${TASK_TOOLS_REPLACED_IN} brings the real tools.` })
-  }
-  let args: Record<string, unknown>
-  try {
-    const parsed = JSON.parse(argsJson || '{}') as unknown
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return JSON.stringify({ tool: name, error: 'not_an_object' })
-    }
-    args = parsed as Record<string, unknown>
-  } catch {
-    return JSON.stringify({ tool: name, error: 'not_json' })
-  }
-  if (name === 'echo') {
-    const message = typeof args.message === 'string' ? args.message.trim().slice(0, ECHO_MAX_CHARS) : ''
-    if (!message) return JSON.stringify({ tool: name, error: 'message_required' })
-    return JSON.stringify({ tool: name, echoed: message })
-  }
-  if (name === 'timed_noop') {
-    const raw = typeof args.ms === 'number' && Number.isFinite(args.ms) ? Math.floor(args.ms) : 0
-    const ms = Math.max(0, Math.min(NOOP_MAX_MS, raw))
-    await deps.sleep(ms)
-    return JSON.stringify({ tool: name, waited_ms: ms })
-  }
-  // count_words: pure computation over the text the model supplied. It is
-  // the one "safe local helper" of the slice: no I/O, no storage, no keys.
-  const text = typeof args.text === 'string' ? args.text.slice(0, COUNT_MAX_CHARS) : ''
-  if (!text.trim()) return JSON.stringify({ tool: name, error: 'text_required' })
-  const words = text.trim().split(/\s+/).length
-  return JSON.stringify({ tool: name, words, characters: text.length })
+  return executeToolCall(getDefaultRegistry(), name, argsJson, { sleep: deps.sleep })
 }
 
 /**
  * The Concierge's hand-off function. The model never runs anything itself:
- * it describes the job, the host queues it (lib/task-runner/queue.ts), and
- * the summary comes back as the tool result for the Concierge to narrate.
+ * it describes the job, the host queues it (lib/task-runner/durable-queue.ts),
+ * and the summary comes back as the tool result for the Concierge to narrate.
  */
 export function handoffToolDefinition(): ChatToolDefinition {
   return {

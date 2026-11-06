@@ -20,7 +20,9 @@ import type { MatterMessage } from '../matters/types.ts'
 import { CONCIERGE_AGENT_PROMPT } from './concierge-prompt.ts'
 import { streamConciergeTurn } from './concierge-agent.ts'
 import { taskRunnerQueueDeps } from './task-runner.ts'
-import { createTaskRunnerQueue, type TaskRunnerQueue, type TaskRunOutcome } from '../task-runner/queue.ts'
+import type { TaskRunnerQueue, TaskRunOutcome } from '../task-runner/queue.ts'
+import { createDurableTaskRunnerQueue } from '../task-runner/durable-queue.ts'
+import { createTaskRunnerDb } from '../task-runner/db.ts'
 
 const LITELLM_ENV = {
   CHATLEGAL_LITELLM_BASE_URL: 'http://127.0.0.1:9/v1',
@@ -118,15 +120,23 @@ function bodyOf(call: Call): {
   return JSON.parse(String(call.init.body)) as never
 }
 
-function fakeQueue(outcome: () => Promise<TaskRunOutcome>): TaskRunnerQueue {
-  return createTaskRunnerQueue({
-    runJob: async () => outcome(),
-  })
+/**
+ * G-03: the queue under test is the durable one — same contract, real
+ * LibSQL behind it (:memory: per test), so the handoff path is exercised
+ * against the shape the routes actually hand over.
+ */
+async function openQueue(
+  outcome: () => Promise<TaskRunOutcome>,
+): Promise<{ queue: TaskRunnerQueue; close: () => Promise<void> }> {
+  const db = createTaskRunnerDb({ url: ':memory:' })
+  const queue = createDurableTaskRunnerQueue({ runJob: async () => outcome() }, { db, pollMs: 5, leaseMs: 60_000 })
+  return { queue, close: () => db.close() }
 }
 
 describe('Concierge → TaskRunner handoff (G-02)', () => {
   it('a quick job is narrated in the same turn and nothing internal is stored', async () => {
     const { store, close } = await openStore()
+    let closeQueue: (() => Promise<void>) | undefined
     try {
       const matterId = await newMatter(store, 'My landlord never protected my deposit.')
       const { fetchImpl, calls } = scriptedFetch([
@@ -138,7 +148,9 @@ describe('Concierge → TaskRunner handoff (G-02)', () => {
           ]),
         () => sse([deltaChunk('The ten-day protection rule applies here.'), DONE]),
       ])
-      const queue = fakeQueue(async () => ({ status: 'done', summary: 'The ten-day rule starts at payment.' }))
+      const opened = await openQueue(async () => ({ status: 'done', summary: 'The ten-day rule starts at payment.' }))
+      closeQueue = opened.close
+      const queue = opened.queue
       const events = await collectTurn({ store, matterId, userText: 'My landlord never protected my deposit.', fetchImpl, taskRunner: { queue } })
 
       // The handoff itself is silent: half-shown copy is reset, the pane
@@ -175,19 +187,23 @@ describe('Concierge → TaskRunner handoff (G-02)', () => {
       const shown = JSON.stringify(thread?.messages)
       assert.doesNotMatch(shown, /tool_calls|hand_off|"arguments"|task_/)
     } finally {
+      await closeQueue?.()
       await close()
     }
   })
 
   it('a slow job is accepted, then narrated next turn as tagged task-result context, once', async () => {
     const { store, close } = await openStore()
+    let closeQueue: (() => Promise<void>) | undefined
     try {
       const matterId = await newMatter(store, 'Which deadlines apply to my deposit?')
       let release: (outcome: TaskRunOutcome) => void = () => {}
       const pending = new Promise<TaskRunOutcome>((resolve) => {
         release = resolve
       })
-      const queue = fakeQueue(() => pending)
+      const opened = await openQueue(() => pending)
+      closeQueue = opened.close
+      const queue = opened.queue
 
       const firstTurn = scriptedFetch([
         () => sse([...toolCallChunks('hand-1', 'hand_off_to_task_runner', JSON.stringify(HANDOFF_ARGS)), DONE]),
@@ -208,9 +224,14 @@ describe('Concierge → TaskRunner handoff (G-02)', () => {
       assert.match(accepted?.content ?? '', /"status":"accepted"/)
       assert.match(accepted?.content ?? '', /will report the outcome/)
 
-      // The job finishes between turns.
+      // The job finishes between turns. The G-03 queue is async: wait for
+      // its settle through the queue itself, not a microtask spin.
       release({ status: 'done', summary: 'Two dates clash: the notice is 6 April, the deposit is 3 April.' })
-      for (let tick = 0; tick < 10; tick += 1) await Promise.resolve()
+      const acceptedBody = JSON.parse(bodyOf(firstTurn.calls[1]).messages.at(-1)?.content ?? '{}') as {
+        task_id?: string
+      }
+      assert.ok(acceptedBody.task_id, 'the accepted result carries the task id')
+      assert.equal((await queue.waitFor(acceptedBody.task_id, 2_000))?.status, 'done')
 
       const secondTurn = scriptedFetch([() => sse([deltaChunk('The two dates clash: mind the 3 April one.'), DONE])])
       const later = await collectTurn({ store, matterId, userText: 'Anything else?', fetchImpl: secondTurn.fetchImpl, taskRunner: { queue } })
@@ -231,12 +252,14 @@ describe('Concierge → TaskRunner handoff (G-02)', () => {
       await collectTurn({ store, matterId, userText: 'Thanks', fetchImpl: thirdTurn.fetchImpl, taskRunner: { queue } })
       assert.doesNotMatch(bodyOf(thirdTurn.calls[0]).messages[0].content ?? '', /<task-results>/)
     } finally {
+      await closeQueue?.()
       await close()
     }
   })
 
   it('a refused brief queues nothing and lets the Concierge answer in words', async () => {
     const { store, close } = await openStore()
+    let closeQueue: (() => Promise<void>) | undefined
     try {
       const matterId = await newMatter(store, 'Help with my deposit.')
       const { fetchImpl, calls } = scriptedFetch([
@@ -248,7 +271,9 @@ describe('Concierge → TaskRunner handoff (G-02)', () => {
           ]),
         () => sse([deltaChunk('Start with your deposit receipt and the date you paid.'), DONE]),
       ])
-      const queue = fakeQueue(async () => ({ status: 'done', summary: 'never runs' }))
+      const opened = await openQueue(async () => ({ status: 'done', summary: 'never runs' }))
+      closeQueue = opened.close
+      const queue = opened.queue
       const events = await collectTurn({ store, matterId, userText: 'Help with my deposit.', fetchImpl, taskRunner: { queue } })
       assert.deepEqual(
         events.map((event) => event.type),
@@ -268,6 +293,7 @@ describe('Concierge → TaskRunner handoff (G-02)', () => {
         'Start with your deposit receipt and the date you paid.',
       ])
     } finally {
+      await closeQueue?.()
       await close()
     }
   })
@@ -288,6 +314,7 @@ describe('Concierge → TaskRunner handoff (G-02)', () => {
 
   it('off is G-01 unchanged: no model call, no TaskRunner call, no events', async () => {
     const { store, close } = await openStore()
+    let closeQueue: (() => Promise<void>) | undefined
     try {
       const matterId = await newMatter(store, 'Hello.')
       let called = 0
@@ -295,9 +322,11 @@ describe('Concierge → TaskRunner handoff (G-02)', () => {
         called += 1
         return sse([deltaChunk('never'), DONE])
       }) as unknown as typeof fetch
-      const queue = fakeQueue(async () => {
+      const opened = await openQueue(async () => {
         throw new Error('the queue must never run with the gate off')
       })
+      closeQueue = opened.close
+      const queue = opened.queue
       const events = await collectTurn({
         store,
         matterId,
@@ -307,14 +336,16 @@ describe('Concierge → TaskRunner handoff (G-02)', () => {
       })
       assert.deepEqual(events, [])
       assert.equal(called, 0)
-      assert.deepEqual(queue.counts(), { queued: 0, running: 0 })
+      assert.deepEqual(await queue.counts(), { queued: 0, running: 0 })
     } finally {
+      await closeQueue?.()
       await close()
     }
   })
 
   it('end to end: both models on one router, stub tool executed host-side', async () => {
     const { store, close } = await openStore()
+    const db = createTaskRunnerDb({ url: ':memory:' })
     try {
       const matterId = await newMatter(store, 'Here is my story: I paid 900 pounds on the 1st.')
       const seen: { concierge: number; taskrunner: number } = { concierge: 0, taskrunner: 0 }
@@ -336,7 +367,12 @@ describe('Concierge → TaskRunner handoff (G-02)', () => {
         }
         return sse([deltaChunk('Your note gives one payment: 900 pounds on the 1st. Keep that receipt safe.'), DONE])
       }) as unknown as typeof fetch
-      const queue = createTaskRunnerQueue(taskRunnerQueueDeps(LITELLM_ENV, fetchImpl), { maxConcurrent: 2 })
+      const queue = createDurableTaskRunnerQueue(taskRunnerQueueDeps(LITELLM_ENV, fetchImpl), {
+        db,
+        maxConcurrent: 2,
+        pollMs: 5,
+        leaseMs: 60_000,
+      })
       const events = await collectTurn({ store, matterId, userText: 'Here is my story: I paid 900 pounds on the 1st.', fetchImpl, taskRunner: { queue } })
       assert.deepEqual(
         events.map((event) => event.type),
@@ -348,6 +384,7 @@ describe('Concierge → TaskRunner handoff (G-02)', () => {
       assert.deepEqual(thread?.messages.map((message) => message.role), ['user', 'assistant'])
       assert.doesNotMatch(JSON.stringify(thread?.messages), /count_words|task_|"arguments"/)
     } finally {
+      await db.close()
       await close()
     }
   })
