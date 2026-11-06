@@ -39,6 +39,7 @@ export function MatterPaneViews({
   messages,
   threadStatus,
   observations,
+  replying = false,
 }: {
   mode: MatterPaneView
   matterId: string | null
@@ -46,6 +47,8 @@ export function MatterPaneViews({
   messages: readonly MatterMessage[]
   threadStatus: MatterThreadStatus
   observations: MatterObservations | null
+  /** The Concierge stream is still filling the chat (G-01 narration). */
+  replying?: boolean
 }) {
   if (mode === 'parties') {
     const copy = partiesViewCopy(matterId)
@@ -73,6 +76,8 @@ export function MatterPaneViews({
     status: threadStatus,
     messageCount: messages.length,
     observations,
+    messages,
+    replying,
   })
   return (
     <section aria-label="Status" className="flex max-w-prose flex-col gap-3">

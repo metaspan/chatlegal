@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { isLiteLLMEnabled } from '@/lib/llm/config'
-import { CONCIERGE_REPLY_FAILED, streamConciergeReply } from '@/lib/llm/concierge-reply'
+import { CONCIERGE_REPLY_FAILED } from '@/lib/llm/concierge-reply'
+import { streamConciergeTurn } from '@/lib/llm/concierge-agent'
 import { MATTER_STREAM_CONTENT_TYPE, type MatterStreamEvent } from '@/lib/matters/chat-stream'
 import { MatterMessageError, parseMatterMessageBody } from '@/lib/matters/message'
 import { appendMatterMessage, getMatterStore, type MatterStore } from '@/lib/matters/store'
@@ -17,14 +18,17 @@ type RouteContext = { params: Promise<{ matterId: string }> }
  * LiteLLM off (no base URL and key): one JSON reply, 201, no model is called.
  * That is the F-04 / D-03 gate style: the proxy is a key-gated service.
  *
- * LiteLLM on: the same append, then the Concierge reply streams back as
- * newline-delimited JSON events (lib/matters/chat-stream.ts). The reply is
- * stored on the thread through the same store helper. The outbound model id
+ * LiteLLM on: the same append, then the Concierge agent turn streams back as
+ * newline-delimited JSON events (lib/matters/chat-stream.ts). The Concierge
+ * owns the turn (G-01): its words stream as deltas, its stored replies ride
+ * `assistant` events, and an askChoice card it asks for is stored through
+ * the C-04 store path and also rides an `assistant` event. The answer route
+ * resumes the run with the stored tool result. The outbound model id
  * resolves server-side in lib/llm (the Small class label maps to the
  * Concierge alias there, not here).
  *
- * TODO(G-01 Concierge): ask_user cards, tools, and protocol packs come from
- * the model. This route only streams plain text for G-00.
+ * TODO(G-02+): tools other than askChoice, TaskRunner, and protocol packs
+ * stay out. This route only runs the Concierge turn.
  */
 export async function POST(request: Request, context: RouteContext) {
   const session = await requireConsumerSession()
@@ -57,9 +61,10 @@ export async function POST(request: Request, context: RouteContext) {
 
 /**
  * The events for one send, one JSON object per line: the stored user
- * message, the reply deltas, then the stored assistant message. A model that
- * cannot be reached is one error event: the person's message is already
- * stored, so the send still counted.
+ * message, the reply deltas, then the stored assistant messages (the
+ * Concierge's words, then any card it asked for). A model that cannot be
+ * reached is one error event: the person's message is already stored, so
+ * the send still counted.
  */
 function matterReplyStream(
   store: MatterStore,
@@ -74,7 +79,7 @@ function matterReplyStream(
     async start(controller) {
       try {
         if (userMessage) controller.enqueue(line({ type: 'user', message: userMessage }))
-        for await (const event of streamConciergeReply({ store, userId, matterId, userText })) {
+        for await (const event of streamConciergeTurn({ store, userId, matterId, userText })) {
           controller.enqueue(line(event))
         }
       } catch (error) {

@@ -1,7 +1,7 @@
 /**
  * Stores the scripted first turn on a matter the user owns.
- * This does not call a model. TODO(G-01 Concierge): continue from the stored
- * pick when a model may run. G-00 stays on hold.
+ * This does not call a model. The two scripted cards keep their templated
+ * notes on answer (the Concierge resumes only for cards it asked for).
  */
 import type { MatterStore } from './store'
 import { appendAskChoice, appendMatterMessage, getMatterThread } from './store'

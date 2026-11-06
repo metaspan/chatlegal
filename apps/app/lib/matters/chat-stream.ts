@@ -1,12 +1,21 @@
 /**
- * The centre-pane chat stream (G-00).
+ * The centre-pane chat stream (G-00, extended by G-01).
  *
  * When LiteLLM is on, POST /api/matters/:id/messages answers with
  * newline-delimited JSON instead of one JSON body: one event per line.
  * This module parses those lines and holds the on-screen updates for them.
  *
+ * G-01 adds two things on the same protocol:
+ * - an askChoice card rides an `assistant` event: the stored message carries
+ *   the C-04 `widget` field, and the centre pane renders it through the
+ *   C-04 card path. No widget-specific event is needed.
+ * - a `reset` event, for the one case the G-00 events cannot express: the
+ *   agent threw away the text it had streamed (an invalid card call was
+ *   refused) and is answering again. The pane drops the half-shown copy
+ *   before the new deltas arrive.
+ *
  * Client-safe: no env is read here and no server module is imported. The
- * server side of the protocol lives in lib/llm/concierge-reply.ts.
+ * server side of the protocol lives in lib/llm/concierge-agent.ts.
  */
 
 import { isStoredMatterMessage } from './message'
@@ -20,6 +29,8 @@ export type MatterStreamEvent =
   | { type: 'user'; message: MatterMessage }
   /** One piece of the assistant reply. The centre pane appends these. */
   | { type: 'delta'; text: string }
+  /** Drop the half-shown streamed copy. The agent is answering again (G-01). */
+  | { type: 'reset' }
   /** The assistant reply, stored. This replaces the streamed copy. */
   | { type: 'assistant'; message: MatterMessage }
   /** The reply did not arrive. The user's own message is still stored. */
@@ -77,6 +88,8 @@ export function parseMatterStreamEvent(line: string): MatterStreamEvent | null {
       return isStoredMatterMessage(record.message) ? { type: record.type, message: record.message } : null
     case 'delta':
       return typeof record.text === 'string' && record.text.length > 0 ? { type: 'delta', text: record.text } : null
+    case 'reset':
+      return { type: 'reset' }
     case 'error':
       return typeof record.message === 'string' && record.message.trim().length > 0
         ? { type: 'error', message: record.message }

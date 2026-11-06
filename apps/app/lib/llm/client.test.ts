@@ -5,6 +5,10 @@ import {
   MIN_VISIBLE_TOKENS,
   chatCompletion,
   streamChatCompletion,
+  streamChatTurn,
+  toolResultMessage,
+  type ChatMessage,
+  type ChatTurnEvent,
 } from './client.ts'
 import { DEFAULT_SESSION_HEADER, type LiteLLMConfig } from './config.ts'
 
@@ -162,5 +166,152 @@ describe('LiteLLM client (G-00)', () => {
     await chatCompletion(config, withoutSession, fetchImpl)
     const headers = calls[0].init.headers as Record<string, string>
     assert.equal(headers[DEFAULT_SESSION_HEADER], undefined)
+  })
+})
+
+/** A tool-call delta: id and name on the first piece, arguments after. */
+function toolCallFirstChunk(id: string, name: string, argsStart: string, index = 0): string {
+  return `data: ${JSON.stringify({
+    choices: [{ delta: { tool_calls: [{ index, id, function: { name, arguments: argsStart } }] } }] as unknown[],
+  })}`
+}
+
+function toolCallArgsChunk(argsFragment: string, index = 0): string {
+  return `data: ${JSON.stringify({
+    choices: [{ delta: { tool_calls: [{ index, function: { arguments: argsFragment } }] } }] as unknown[],
+  })}`
+}
+
+async function collectTurn(generator: AsyncGenerator<ChatTurnEvent>): Promise<ChatTurnEvent[]> {
+  const events: ChatTurnEvent[] = []
+  for await (const event of generator) events.push(event)
+  return events
+}
+
+describe('LiteLLM client tool calls (G-01)', () => {
+  it('sends the offered functions in the OpenAI tools shape', async () => {
+    const calls: Call[] = []
+    const fetchImpl = (async (url: unknown, init?: RequestInit) => {
+      calls.push({ url: String(url), init: init ?? {} })
+      return sseResponse(['data: [DONE]'])
+    }) as unknown as typeof fetch
+    await collectTurn(
+      streamChatTurn(config, {
+        ...baseRequest,
+        tools: [{ name: 'askChoice', description: 'Ask one structured question.', parameters: { type: 'object' } }],
+      }, fetchImpl),
+    )
+    const body = JSON.parse(String(calls[0].init.body)) as {
+      tools: { type: string; function: { name: string; description: string; parameters: Record<string, unknown> } }[]
+    }
+    assert.equal(body.tools.length, 1)
+    assert.equal(body.tools[0].type, 'function')
+    assert.equal(body.tools[0].function.name, 'askChoice')
+    assert.deepEqual(body.tools[0].function.parameters, { type: 'object' })
+  })
+
+  it('omits the tools key entirely when none are offered', async () => {
+    const calls: Call[] = []
+    const fetchImpl = (async (url: unknown, init?: RequestInit) => {
+      calls.push({ url: String(url), init: init ?? {} })
+      return sseResponse(['data: [DONE]'])
+    }) as unknown as typeof fetch
+    await collectTurn(streamChatTurn(config, baseRequest, fetchImpl))
+    const body = JSON.parse(String(calls[0].init.body)) as Record<string, unknown>
+    assert.equal('tools' in body, false)
+  })
+
+  it('yields content live and one complete tool call after the stream', async () => {
+    const args = JSON.stringify({ question: 'Papers?', options: [{ id: 'letter', label: 'A letter' }, { id: 'court', label: 'Court papers' }] })
+    const fetchImpl = (async () =>
+      sseResponse([
+        deltaChunk('One line. '),
+        toolCallFirstChunk('call-9', 'askChoice', args.slice(0, 20)),
+        toolCallArgsChunk(args.slice(20, 60)),
+        toolCallArgsChunk(args.slice(60)),
+        'data: {"choices":[{"delta":{}}]}',
+        'data: [DONE]',
+      ])) as unknown as typeof fetch
+    const events = await collectTurn(streamChatTurn(config, baseRequest, fetchImpl))
+    assert.deepEqual(events.slice(0, 1), [{ type: 'content', text: 'One line. ' }])
+    const last = events.at(-1)
+    assert.equal(last?.type, 'tool_calls')
+    const calls = (last as { calls: { id: string; name: string; arguments: string }[] }).calls
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].id, 'call-9')
+    assert.equal(calls[0].name, 'askChoice')
+    assert.equal(calls[0].arguments, args)
+    assert.deepEqual(JSON.parse(calls[0].arguments), JSON.parse(args))
+  })
+
+  it('keeps two indexed calls in order and drops a call with no name', async () => {
+    const fetchImpl = (async () =>
+      sseResponse([
+        toolCallFirstChunk('call-a', 'askChoice', '{"a":1}'),
+        toolCallFirstChunk('call-b', 'otherTool', '{"b":2}', 1),
+        toolCallArgsChunk('{"tail":true}', 1),
+        // Index 2 only ever carries argument pieces: no name to route by.
+        toolCallArgsChunk('{"orphan":1}', 2),
+        'data: [DONE]',
+      ])) as unknown as typeof fetch
+    const events = await collectTurn(streamChatTurn(config, baseRequest, fetchImpl))
+    const calls = (events.at(-1) as { calls: { id: string; name: string; arguments: string }[] }).calls
+    assert.deepEqual(
+      calls.map((call) => [call.id, call.name, call.arguments]),
+      [
+        ['call-a', 'askChoice', '{"a":1}'],
+        ['call-b', 'otherTool', '{"b":2}{"tail":true}'],
+      ],
+    )
+  })
+
+  it('drops tool calls that carry no name', async () => {
+    const fetchImpl = (async () =>
+      sseResponse([toolCallArgsChunk('{"orphan":true}', 0), deltaChunk('text only'), 'data: [DONE]'])) as unknown as typeof fetch
+    const events = await collectTurn(streamChatTurn(config, baseRequest, fetchImpl))
+    assert.deepEqual(events, [{ type: 'content', text: 'text only' }])
+  })
+
+  it('streamChatCompletion ignores tool calls and yields content only', async () => {
+    const fetchImpl = (async () =>
+      sseResponse([deltaChunk('Hello '), toolCallFirstChunk('call-x', 'askChoice', '{}'), 'data: [DONE]'])) as unknown as typeof fetch
+    const parts: string[] = []
+    for await (const part of streamChatCompletion(config, baseRequest, fetchImpl)) parts.push(part)
+    assert.deepEqual(parts, ['Hello '])
+  })
+
+  it('serialises assistant tool calls and tool results in the OpenAI wire shape', async () => {
+    const calls: Call[] = []
+    const fetchImpl = (async (url: unknown, init?: RequestInit) => {
+      calls.push({ url: String(url), init: init ?? {} })
+      return sseResponse(['data: [DONE]'])
+    }) as unknown as typeof fetch
+    const messages: ChatMessage[] = [
+      { role: 'system', content: 'Be brief.' },
+      { role: 'user', content: 'Where?' },
+      {
+        role: 'assistant',
+        content: '',
+        toolCalls: [{ id: 'call-1', name: 'askChoice', arguments: '{"question":"Where?","options":[]}' }],
+      },
+      toolResultMessage('call-1', '{"widget":"askChoice","version":2,"answer":{"choice":"england"}}'),
+      { role: 'user', content: 'England.' },
+    ]
+    await collectTurn(streamChatTurn(config, { ...baseRequest, messages }, fetchImpl))
+    const body = JSON.parse(String(calls[0].init.body)) as { messages: Record<string, unknown>[] }
+    assert.deepEqual(body.messages[0], { role: 'system', content: 'Be brief.' })
+    assert.deepEqual(body.messages[2], {
+      role: 'assistant',
+      content: '',
+      tool_calls: [
+        { id: 'call-1', type: 'function', function: { name: 'askChoice', arguments: '{"question":"Where?","options":[]}' } },
+      ],
+    })
+    assert.deepEqual(body.messages[3], {
+      role: 'tool',
+      tool_call_id: 'call-1',
+      content: '{"widget":"askChoice","version":2,"answer":{"choice":"england"}}',
+    })
+    assert.deepEqual(body.messages[4], { role: 'user', content: 'England.' })
   })
 })

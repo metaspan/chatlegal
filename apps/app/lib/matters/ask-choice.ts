@@ -8,8 +8,11 @@
  * the submit gate in hitly-net/hitly@94b2e92
  * apps/app/components/answer-form.tsx (controls lock while the answer is in
  * flight; the host validates the submission).
- * TODO(G-01 Concierge): emit this tool from the model and resume the run with
- * the stored result `{ widget, version, answer }`. This module does not call a model.
+ * The G-01 Concierge emits this tool itself: the model calls askChoice and
+ * the agent loop stores the card through appendAskChoice, then the answer
+ * route resumes the run with the stored result `{ widget, version, answer }`
+ * (lib/llm/concierge-agent.ts and the answer route). This module does not
+ * call a model.
  */
 import { z } from 'zod'
 import type { AskChoiceAnswer, AskChoiceOption, MatterAskChoice } from './types'
