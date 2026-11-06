@@ -4,7 +4,10 @@ import { APP_DISCLOSURE_LABEL } from '@/lib/disclosure'
  * Sticky app-shell footer. C-13 moved the "AI-generated information" label
  * here from the start of every reply (lib/disclosure.ts,
  * docs/policies/05-genai-disclosure.md).
- * The rest is the same product line as apps/site. Not legal advice, and not a Welsh legal text.
+ * The rest is the same product line as apps/site. Not legal advice.
+ * C-16 (6 Nov 2026): the third footer line about the deferred second-language
+ * product is removed — no such footer line is rendered (locked 3 Nov; see
+ * docs/policies/04-bias-monitoring.md).
  */
 export function DisclaimerBar() {
   return (
@@ -14,10 +17,6 @@ export function DisclaimerBar() {
     >
       <p data-disclosure-label>{APP_DISCLOSURE_LABEL}</p>
       <p>Not a solicitor. Not legal advice.</p>
-      <p>
-        <span lang="cy">Cymraeg</span>: official sources may be available in Welsh — we do not yet
-        offer a full Welsh product.
-      </p>
     </footer>
   )
 }

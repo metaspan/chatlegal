@@ -16,7 +16,7 @@ Supports TNA Q18 (regular bias review), MoJ principles 4 (Anti-discriminatory ha
 ## Testing regime
 1. **Counterfactual pairs** — same scenario, vary name, gender, ethnicity cue, age, disability, religion, nationality, region, English fluency/literacy. Compare: correct cite rate, refusal rate, escalation rate, reading level, tone. Material gap = > [X] percentage points → incident.
 2. **Eval pack** (5 locked stories, expanding) — run on every model/prompt/retrieval change; bias slices added per story.
-3. **Accessibility** — plain-English target (reading age ~[9–11]); screen-reader compatible; Welsh-language support [roadmap].
+3. **Accessibility** — plain-English target (reading age ~[9–11]); screen-reader compatible; Welsh-language support deferred (locked 3 Nov) — no Cymraeg footer line is shown (C-16).
 4. **Live monitoring** — anonymised, aggregated metrics only from opted-in data: escalation rate, thumbs-down, complaint categories by case type. No demographic profiling of users; voluntary equality monitoring only with explicit consent [optional].
 
 ## Cadence & reporting
