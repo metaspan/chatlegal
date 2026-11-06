@@ -312,7 +312,9 @@ describe('dashboard shell', () => {
     assert.match(disclaimer, /data-disclosure-footer/)
     assert.match(disclaimer, /AI-generated information — check the sources\./)
     assert.match(disclaimer, /Not a solicitor\. Not legal advice\./)
-    assert.match(disclaimer, /lang="cy"/)
+    // C-16 (locked 3 Nov): the deferred second-language footer line is gone
+    // and must never render again — guard against reintroduction.
+    assert.doesNotMatch(disclaimer, /lang="cy"|Cymraeg|Welsh/i)
     assert.doesNotMatch(chat + viewer + history + disclaimer, /I act for you/)
     assert.doesNotMatch(viewer, /data-plan-card/)
 
