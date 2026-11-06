@@ -34,7 +34,7 @@ import { ASK_CHOICE_NAME, askChoiceToolArgs } from '../matters/ask-choice'
 import { askChoiceToolDefinition, awaitingAnswerToolResult, readAskChoiceCallArgs } from './concierge-tools'
 import { CONCIERGE_AGENT_PROMPT } from './concierge-prompt'
 import { CONCIERGE_REPLY_FAILED } from './concierge-reply'
-import { litellmConfig, resolveOutboundModelId } from './config'
+import { getTaskRunnerModel, litellmConfig, resolveOutboundModelId } from './config'
 import {
   streamChatTurn,
   toolResultMessage,
@@ -44,6 +44,10 @@ import {
 import { appendAskChoice, appendMatterMessage, getMatterThread, type MatterStore } from '../matters/store'
 import type { MatterMessage, MatterAskChoice } from '../matters/types'
 import type { MatterStreamEvent } from '../matters/chat-stream'
+import { CONCIERGE_TASKRUNNER_PROMPT, taskResultsContext, type TaskResultContext } from './task-runner-prompt'
+import { HANDOFF_NAME, handoffToolDefinition, readHandoffCallArgs } from './task-runner-tools'
+import { handoffWaitMs } from './task-runner'
+import { TASK_FAILED_NOTE, type TaskRunnerQueue } from '../task-runner/queue'
 
 /** How many earlier turns the model may see. Oldest are dropped first. */
 const HISTORY_MESSAGES = 12
@@ -65,10 +69,22 @@ export const CONCIERGE_MAX_AGENT_STEPS = 3
  * its own question and the pick, exactly as memory replays widget tool
  * calls in dcolley/tourbillon@7a8595b. A card still waiting replays with an
  * awaiting_answer result: it states the state without inventing a pick.
+ *
+ * G-02 adds the optional options block: the TaskRunner prompt and the
+ * finished background results ride on the system message as tagged XML
+ * context (task-runner-prompt.ts, adapted from concierge-signal.ts — a
+ * signal, never a fake user message). No options means the exact G-01
+ * request, byte for byte.
  */
+export type AgentConversationOptions = {
+  systemPrompt?: string
+  taskResults?: readonly TaskResultContext[]
+}
+
 export function agentConversationMessages(
   history: readonly MatterMessage[],
   userText?: string,
+  options?: AgentConversationOptions,
 ): ChatMessage[] {
   const turns: ChatMessage[] = []
   let chars = 0
@@ -90,7 +106,9 @@ export function agentConversationMessages(
   if (text && (!last || last.role !== 'user' || last.content !== text)) {
     turns.push({ role: 'user', content: text })
   }
-  return [{ role: 'system', content: CONCIERGE_AGENT_PROMPT }, ...turns]
+  const basePrompt = options?.systemPrompt ?? CONCIERGE_AGENT_PROMPT
+  const taskBlock = options?.taskResults ? taskResultsContext(options.taskResults) : ''
+  return [{ role: 'system', content: taskBlock ? `${basePrompt}\n\n${taskBlock}` : basePrompt }, ...turns]
 }
 
 /** The assistant tool call and its tool result, in wire order. */
@@ -132,6 +150,17 @@ function replayAskChoice(widget: MatterAskChoice, accompanyingText: string): Cha
  * answer (no userText: the thread already ends on the tool result). Yields
  * the stream events; stores every message it shows. Off means no events at
  * all: no model call, exactly the G-00 gate.
+ *
+ * G-02 (taskRunner present AND the TaskRunner alias gated on): the
+ * Concierge is also offered hand_off_to_task_runner. A valid call enqueues
+ * the brief on the background queue and awaits it briefly (handoffWaitMs):
+ * a quick job answers in the same turn as a plain summary the Concierge
+ * then narrates; a slower one answers 'accepted' and the finished result
+ * rides a later turn as tagged task-result context. Half-shown copy before
+ * a handoff is reset, the refused-card way — the citizen sees only the
+ * Concierge's own words. An invalid brief is refused with nothing stored,
+ * exactly like an invalid card. Off, or no queue: one tool (askChoice),
+ * one prompt, and one behaviour — the G-01 path unchanged.
  */
 export async function* streamConciergeTurn(input: {
   store: MatterStore
@@ -140,6 +169,8 @@ export async function* streamConciergeTurn(input: {
   userText?: string
   env?: NodeJS.ProcessEnv
   fetchImpl?: typeof fetch
+  /** The G-02 background queue (getSharedTaskRunnerQueue at the routes). */
+  taskRunner?: { queue: TaskRunnerQueue }
 }): AsyncGenerator<MatterStreamEvent> {
   const env = input.env ?? process.env
   const config = litellmConfig(env)
@@ -147,8 +178,27 @@ export async function* streamConciergeTurn(input: {
   const model = resolveOutboundModelId(defaultModelClass.modelId, env) ?? config.conciergeModel
   const thread = await getMatterThread(input.store, input.userId, input.matterId)
   if (!thread) return
-  const messages = agentConversationMessages(thread.messages, input.userText)
+  const queue = input.taskRunner?.queue
+  const taskRunnerOn = queue !== undefined && getTaskRunnerModel(env) !== null
+  // Finished background work nobody has reported yet rides this turn's
+  // system message as a tagged block (concierge-signal.ts style). Taking it
+  // marks it delivered, so it is narrated at most once.
+  const taskResults: TaskResultContext[] = taskRunnerOn && queue
+    ? queue
+        .collectDeliverable(input.userId, input.matterId)
+        .map((job) => ({
+          id: job.id,
+          title: job.title,
+          status: job.status === 'done' ? ('done' as const) : ('failed' as const),
+          summary: job.summary ?? TASK_FAILED_NOTE,
+        }))
+    : []
+  const messages = agentConversationMessages(thread.messages, input.userText, {
+    ...(taskRunnerOn ? { systemPrompt: CONCIERGE_TASKRUNNER_PROMPT } : {}),
+    taskResults,
+  })
   const fetchImpl = input.fetchImpl ?? globalThis.fetch
+  const tools = taskRunnerOn ? [askChoiceToolDefinition(), handoffToolDefinition()] : [askChoiceToolDefinition()]
 
   for (let step = 0; step < CONCIERGE_MAX_AGENT_STEPS; step += 1) {
     let reply = ''
@@ -159,7 +209,7 @@ export async function* streamConciergeTurn(input: {
         {
           model,
           messages,
-          tools: [askChoiceToolDefinition()],
+          tools,
           maxTokens: REPLY_MAX_TOKENS,
           sessionId: input.matterId,
         },
@@ -181,8 +231,62 @@ export async function* streamConciergeTurn(input: {
       return
     }
 
+    const handoffCall = taskRunnerOn ? toolCalls.find((call) => call.name === HANDOFF_NAME) : undefined
     const askCall = toolCalls.find((call) => call.name === ASK_CHOICE_NAME)
     const text = reply.trim()
+
+    if (handoffCall && queue) {
+      // The handoff itself is silent: anything streamed before the call was
+      // a half-formed promise, so it is dropped (the reset event clears the
+      // pane) and the Concierge speaks once, after the result is in hand.
+      if (text) yield { type: 'reset' }
+      const read = readHandoffCallArgs(handoffCall)
+      if (!read.ok) {
+        // Refused like an invalid card: nothing queued, nothing stored, one
+        // chance to fix the brief or answer in plain words.
+        console.error('concierge handoff call refused', read.issues.join(','))
+        messages.push({ role: 'assistant', content: reply, toolCalls: [handoffCall] })
+        messages.push(
+          toolResultMessage(
+            handoffCall.id,
+            JSON.stringify({
+              tool: HANDOFF_NAME,
+              error: 'invalid_props',
+              issues: read.issues,
+              instruction: 'The job was not started. Ask in plain words, or hand off again with a clear brief.',
+            }),
+          ),
+        )
+        continue
+      }
+      const job = queue.enqueue({
+        userId: input.userId,
+        matterId: input.matterId,
+        title: read.title ?? 'Background check',
+        brief: read.brief,
+      })
+      const settled = await queue.waitFor(job.id, handoffWaitMs(env))
+      const finished = settled && (settled.status === 'done' || settled.status === 'failed')
+      const result = finished
+        ? {
+            tool: HANDOFF_NAME,
+            task_id: job.id,
+            status: settled.status,
+            summary: settled.summary ?? TASK_FAILED_NOTE,
+          }
+        : {
+            tool: HANDOFF_NAME,
+            task_id: job.id,
+            status: 'accepted',
+            instruction:
+              'The job is still running. Tell the person in plain words you are looking into it and will report the outcome, then continue the turn.',
+          }
+      // The tool transcript stays in `messages` (model context only): like
+      // the card internals in G-01, it never reaches the thread.
+      messages.push({ role: 'assistant', content: reply, toolCalls: [handoffCall] })
+      messages.push(toolResultMessage(handoffCall.id, JSON.stringify(result)))
+      continue
+    }
 
     if (!askCall) {
       if (!text) {
