@@ -9,7 +9,7 @@ Supports TNA Q26 (notify GenAI use = Yes), Q25 (not automated legal advice), MoJ
 |---|---|
 | Landing page + sign-up | "ChatLegal uses generative AI to explain UK law and point you to official sources. It is not a solicitor and does not give legal advice." |
 | Start of every session | Short notice + link to "How ChatLegal works" (methodology page). Must be acknowledged once per account and visible on every session. |
-| Every answer | Label "AI-generated information — check the sources" + numbered citations linking to the authoritative source (legislation.gov.uk, GOV.UK, FCL). |
+| Chat app, every screen | Sticky app-shell footer: "AI-generated information — check the sources." + "Not a solicitor. Not legal advice." C-13 (6 Nov 2026): the label is shown once in this persistent footer instead of being led into every reply, so it stays visible while the transcript scrolls and streams. Replies still carry numbered citations linking to the authoritative source (legislation.gov.uk, GOV.UK, FCL). |
 | Escalation | Plain statement why a human is needed and where to go. |
 | Exports / info memos | Header: "AI-generated legal information, not legal advice. Generated [date] by ChatLegal." |
 | Team/Pro shares | Same labels survive copy/export; cannot be removed by admins. |

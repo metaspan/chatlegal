@@ -1,4 +1,5 @@
 import { AskChoiceCard } from '@/components/chat/ask-choice-card'
+import { ChatMarkdown } from '@/components/chat/chat-markdown'
 import { LinkedText } from '@/components/chat/linked-text'
 import { toolUseLabel } from '@/lib/matters/present'
 import type { AskChoiceAnswer, MatterMessage } from '@/lib/matters/types'
@@ -10,6 +11,9 @@ import { cn } from '@/lib/utils'
  * apps/web/components/assistant/agent-chat.tsx (ItemView): the person's words
  * sit at the end, ChatLegal's words sit at the start.
  * User text uses the raised cream card, not burgundy, so the column stays quiet.
+ * C-14: assistant text renders as a safe Markdown subset (chat-markdown.tsx).
+ * User text stays verbatim — LinkedText only — so what a person typed shows
+ * exactly as typed; their words are never re-interpreted as markup.
  * Tool rows are a single plain line. The tool-state card in that chat
  * pretty-prints JSON; this pane does not.
  */
@@ -46,12 +50,12 @@ export function MessageList({
             {message.text ? (
               <div
                 className={cn(
-                  'text-sm leading-relaxed whitespace-pre-wrap break-words',
-                  fromYou ? 'rounded-lg border bg-card px-3 py-2' : 'text-foreground',
+                  'text-sm leading-relaxed break-words',
+                  fromYou ? 'rounded-lg border bg-card px-3 py-2 whitespace-pre-wrap' : 'text-foreground',
                   message.pending && 'opacity-70',
                 )}
               >
-                <LinkedText text={message.text} />
+                {fromYou ? <LinkedText text={message.text} /> : <ChatMarkdown text={message.text} />}
               </div>
             ) : null}
             {widget ? (

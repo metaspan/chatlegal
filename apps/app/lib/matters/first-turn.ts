@@ -4,16 +4,16 @@
  * keep their templated notes when answered; the G-01 Concierge resumes with
  * a model turn only for cards it asked for itself.
  *
- * Copy is locked to docs/policies/05-genai-disclosure.md (session notice and the
- * answer label), docs/policies/01-code-of-ethics.md (not a solicitor; escalate
- * early), and docs/REFERRALS.md (hard-escalate destinations). Third-party names
- * are link-out destinations. Their pages are not quoted.
+ * Copy is locked to docs/policies/05-genai-disclosure.md (session notice; the
+ * "AI-generated information" label now sits in the sticky app-shell footer —
+ * C-13 — see lib/disclosure.ts), docs/policies/01-code-of-ethics.md (not a
+ * solicitor; escalate early), and docs/REFERRALS.md (hard-escalate
+ * destinations). Third-party names are link-out destinations. Their pages
+ * are not quoted.
  */
 import { parseAskChoiceProps, type AskChoiceProps } from './ask-choice'
 import { isStoredMatterMessage, presentStoredMatterMessage } from './message'
 import type { MatterMessage, MatterSummary } from './types'
-
-export const FIRST_TURN_DISCLOSURE_LABEL = 'AI-generated information — check the sources.'
 
 export const FIRST_TURN_WHERE_QUESTION = 'Where is this happening?'
 
@@ -51,16 +51,10 @@ const PLACE_IDS = ['england', 'wales', 'scotland', 'northern-ireland', 'not-sure
 
 export type FirstTurnPlaceId = (typeof PLACE_IDS)[number]
 
-function labelled(body: string): string {
-  return `${FIRST_TURN_DISCLOSURE_LABEL}\n\n${body}`
-}
-
-/** The message a new matter opens on. */
+/** The message a new matter opens on. C-13: no AI-generated lead-in; the app-shell footer owns it. */
 export function firstTurnOpeningText(): string {
   const u = FIRST_TURN_URLS
   return [
-    FIRST_TURN_DISCLOSURE_LABEL,
-    '',
     `ChatLegal uses generative AI to explain UK law and point you to official sources. It is not a solicitor and does not give legal advice. How ChatLegal works: ${u.howItWorks}`,
     '',
     'Say what happened, where it is happening, and what you have — a letter, a notice, court papers, or nothing yet. Use your own words. The questions under this message record the place and the papers.',
@@ -132,7 +126,7 @@ export function firstTurnPlaceNote(choiceId: string): string | null {
       'The country is not named yet. Official pages differ, so name the country if you can. Write what happened in your own words. This is not legal advice.',
   }
   if (!Object.hasOwn(notes, choiceId)) return null
-  return labelled(notes[choiceId as FirstTurnPlaceId])
+  return notes[choiceId as FirstTurnPlaceId]
 }
 
 /** Short note after the papers card. */
@@ -140,16 +134,12 @@ export function firstTurnPapersNote(choiceIds: readonly string[]): string | null
   if (choiceIds.length === 0) return null
   const u = FIRST_TURN_URLS
   if (choiceIds.includes('court-papers')) {
-    return labelled(
-      `Court papers are noted on this chat. If a date on them is soon, use ${u.possession} or ${u.legalAidFinder} or ${u.moneyClaim} before you write more. Then say what happened, in your own words. This is not legal advice.`,
-    )
+    return `Court papers are noted on this chat. If a date on them is soon, use ${u.possession} or ${u.legalAidFinder} or ${u.moneyClaim} before you write more. Then say what happened, in your own words. This is not legal advice.`
   }
   if (choiceIds.length === 1 && choiceIds[0] === 'nothing-yet') {
-    return labelled('Nothing on paper yet is fine. Write what happened, in your own words. This is not legal advice.')
+    return 'Nothing on paper yet is fine. Write what happened, in your own words. This is not legal advice.'
   }
-  return labelled(
-    'Those papers are noted on this chat. Write what happened, and what they say, in your own words. Leave out passwords and card numbers. This is not legal advice.',
-  )
+  return 'Those papers are noted on this chat. Write what happened, and what they say, in your own words. Leave out passwords and card numbers. This is not legal advice.'
 }
 
 /** The templated note for an answered first-turn card. Other cards return null. */

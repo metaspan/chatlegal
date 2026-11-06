@@ -41,7 +41,17 @@ function isBlockStart(line: string): boolean {
   )
 }
 
-export function parseMarkdownBlocks(source: string): MarkdownBlock[] {
+export interface MarkdownParseOptions {
+  /**
+   * Join the lines of a paragraph (or quote) with a space, as Markdown does
+   * (default, used by the file preview). Pass false in the chat transcript,
+   * where one source line per row is part of the answer's shape (C-14).
+   */
+  joinParagraphs?: boolean
+}
+
+export function parseMarkdownBlocks(source: string, options: MarkdownParseOptions = {}): MarkdownBlock[] {
+  const joiner = options.joinParagraphs === false ? '\n' : ' '
   const lines = source.replace(/\r\n/g, '\n').split('\n')
   const blocks: MarkdownBlock[] = []
   let index = 0
@@ -104,7 +114,7 @@ export function parseMarkdownBlocks(source: string): MarkdownBlock[] {
       paragraph.push(lines[index] ?? '')
       index += 1
     }
-    blocks.push({ type: 'p', text: paragraph.join(' ') })
+    blocks.push({ type: 'p', text: paragraph.join(joiner) })
   }
   return blocks
 }

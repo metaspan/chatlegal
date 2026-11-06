@@ -4,9 +4,10 @@ import fs from 'node:fs'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ChatColumn } from '../../components/chat/chat-column.tsx'
+import { DisclaimerBar } from '../../components/disclaimer-bar.tsx'
+import { APP_DISCLOSURE_LABEL } from '../disclosure.ts'
 import { presentAskChoice } from './ask-choice.ts'
 import {
-  FIRST_TURN_DISCLOSURE_LABEL,
   FIRST_TURN_PAPERS_QUESTION,
   FIRST_TURN_URLS,
   FIRST_TURN_WHERE_QUESTION,
@@ -59,7 +60,9 @@ describe('new matter first turn', () => {
   it('locks the opening to the disclosure, the three questions, and the hard-escalate pages', () => {
     const opening = firstTurnOpeningText()
     assert.ok(opening.length < 8000)
-    assert.match(opening, new RegExp(FIRST_TURN_DISCLOSURE_LABEL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+    // C-13: no AI-generated lead-in in the message; the sticky app-shell footer owns it.
+    assert.doesNotMatch(opening, /AI-generated information/)
+    assert.match(opening, /ChatLegal uses generative AI to explain UK law/)
     assert.match(opening, /It is not a solicitor and does not give legal advice\./)
     assert.match(opening, /How ChatLegal works:/)
     assert.match(opening, /what happened/i)
@@ -148,7 +151,12 @@ describe('new matter first turn', () => {
       }),
     )
     assert.match(html, /It is not a solicitor and does not give legal advice\./)
-    assert.match(html, /AI-generated information/)
+    // C-13: the transcript rows carry no AI-generated label; the sticky footer does.
+    assert.doesNotMatch(html, /AI-generated information/)
+    const footer = renderToStaticMarkup(createElement(DisclaimerBar))
+    assert.match(footer, /data-disclosure-footer/)
+    assert.match(footer, new RegExp(APP_DISCLOSURE_LABEL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+    assert.match(footer, /Not a solicitor\. Not legal advice\./)
     assert.match(html, /Where is this happening\?/)
     assert.match(html, /What do you have with you\?/)
     assert.match(html, /href="https:\/\/www\.gov\.uk\/find-an-immigration-adviser"/)
