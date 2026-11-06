@@ -47,7 +47,7 @@ import type { MatterStreamEvent } from '../matters/chat-stream'
 import { CONCIERGE_TASKRUNNER_PROMPT, taskResultsContext, type TaskResultContext } from './task-runner-prompt'
 import { HANDOFF_NAME, handoffToolDefinition, readHandoffCallArgs } from './task-runner-tools'
 import { handoffWaitMs } from './task-runner'
-import { TASK_FAILED_NOTE, type TaskRunnerQueue } from '../task-runner/queue'
+import { TASK_FAILED_NOTE, type TaskRunnerJob, type TaskRunnerQueue } from '../task-runner/queue'
 
 /** How many earlier turns the model may see. Oldest are dropped first. */
 const HISTORY_MESSAGES = 12
@@ -182,17 +182,22 @@ export async function* streamConciergeTurn(input: {
   const taskRunnerOn = queue !== undefined && getTaskRunnerModel(env) !== null
   // Finished background work nobody has reported yet rides this turn's
   // system message as a tagged block (concierge-signal.ts style). Taking it
-  // marks it delivered, so it is narrated at most once.
-  const taskResults: TaskResultContext[] = taskRunnerOn && queue
-    ? queue
-        .collectDeliverable(input.userId, input.matterId)
-        .map((job) => ({
-          id: job.id,
-          title: job.title,
-          status: job.status === 'done' ? ('done' as const) : ('failed' as const),
-          summary: job.summary ?? TASK_FAILED_NOTE,
-        }))
-    : []
+  // marks it delivered, so it is narrated at most once. The G-03 queue is
+  // database-backed, so the pickup is async: a queue hiccup degrades to no
+  // block (the next turn tries again), never to a failed turn.
+  let taskResults: TaskResultContext[] = []
+  if (taskRunnerOn && queue) {
+    try {
+      taskResults = (await queue.collectDeliverable(input.userId, input.matterId)).map((job) => ({
+        id: job.id,
+        title: job.title,
+        status: job.status === 'done' ? ('done' as const) : ('failed' as const),
+        summary: job.summary ?? TASK_FAILED_NOTE,
+      }))
+    } catch (error) {
+      console.error('concierge deliverable pickup failed', String(error))
+    }
+  }
   const messages = agentConversationMessages(thread.messages, input.userText, {
     ...(taskRunnerOn ? { systemPrompt: CONCIERGE_TASKRUNNER_PROMPT } : {}),
     taskResults,
@@ -259,13 +264,36 @@ export async function* streamConciergeTurn(input: {
         )
         continue
       }
-      const job = queue.enqueue({
-        userId: input.userId,
-        matterId: input.matterId,
-        title: read.title ?? 'Background check',
-        brief: read.brief,
+      // The G-03 queue persists before it pumps: a store that cannot be
+      // reached refuses the handoff cleanly (the person keeps their chat),
+      // the same refusal shape as an invalid brief.
+      let job: TaskRunnerJob
+      try {
+        job = await queue.enqueue({
+          userId: input.userId,
+          matterId: input.matterId,
+          title: read.title ?? 'Background check',
+          brief: read.brief,
+        })
+      } catch (error) {
+        console.error('concierge handoff could not be queued', String(error))
+        messages.push({ role: 'assistant', content: reply, toolCalls: [handoffCall] })
+        messages.push(
+          toolResultMessage(
+            handoffCall.id,
+            JSON.stringify({
+              tool: HANDOFF_NAME,
+              error: 'queue_unavailable',
+              instruction: 'The job was not started. Answer in plain words for now.',
+            }),
+          ),
+        )
+        continue
+      }
+      const settled = await queue.waitFor(job.id, handoffWaitMs(env)).catch((error: unknown) => {
+        console.error('concierge handoff wait failed', String(error))
+        return undefined
       })
-      const settled = await queue.waitFor(job.id, handoffWaitMs(env))
       const finished = settled && (settled.status === 'done' || settled.status === 'failed')
       const result = finished
         ? {

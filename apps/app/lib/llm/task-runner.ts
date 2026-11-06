@@ -5,7 +5,8 @@
  * Concierge loop (lib/llm/concierge-agent.ts) turned away from the person:
  * same streamed turns on the same G-00 wire (lib/llm/client.ts), the same
  * host-executes-the-tool rule, but nothing streams to a chat — the model
- * works with the G-02 stub tools and its final words become the summary
+ * works with the G-03 tool bus (lib/task-runner/tool-bus.ts — the G-02
+ * stubs registered on it) and its final words become the summary
  * the Concierge narrates. The model id is CHATLEGAL_TASKRUNNER_MODEL on
  * the SAME LiteLLM env gate as the Concierge (lib/llm/config.ts): off
  * means no TaskRunner call exists, exactly the G-01 behaviour.
@@ -15,9 +16,10 @@
  * rules (unset/garbage → default, an explicit 0 is a VALID kill switch)
  * and one bounded runner, never an unlimited parallel stack.
  *
- * The queue (lib/task-runner/queue.ts) owns when a job runs; this module
- * owns how one attempt runs. getSharedTaskRunnerQueue() is the single
- * in-process queue the routes hand to the Concierge.
+ * The queue (lib/task-runner/durable-queue.ts over the app's own LibSQL
+ * file) owns when a job runs; this module owns how one attempt runs.
+ * getSharedTaskRunnerQueue() is the single queue the routes hand to the
+ * Concierge.
  */
 
 import { getTaskRunnerModel, litellmConfig, type LiteLLMConfig } from './config'
@@ -25,13 +27,15 @@ import { streamChatTurn, toolResultMessage, type ChatMessage, type ChatToolCall 
 import { runTaskRunnerTool, taskRunnerToolDefinitions } from './task-runner-tools'
 import { TASK_RUNNER_SYSTEM_PROMPT } from './task-runner-prompt'
 import {
-  createTaskRunnerQueue,
   RUN_TASK_CAP,
   TASK_FAILED_NOTE,
   type TaskRunnerQueue,
   type TaskRunnerQueueDeps,
   type TaskRunOutcome,
 } from '../task-runner/queue'
+import { createDurableTaskRunnerQueue } from '../task-runner/durable-queue'
+import { createTaskRunnerDb, type TaskRunnerDb } from '../task-runner/db'
+import { mattersDatabaseAuthToken, mattersDatabaseUrl } from '../matters/database-url'
 
 /** Model calls per job: work, tool round-trips, and the summary. */
 export const TASK_RUNNER_MAX_STEPS = 4
@@ -213,22 +217,38 @@ export function taskRunnerQueueDeps(
 }
 
 let sharedQueue: TaskRunnerQueue | null = null
+let sharedDb: TaskRunnerDb | null = null
+
+/**
+ * The lease outlives the whole-job wall clock: a live worker must never
+ * lose its lease to the restart reconciler, only a dead one.
+ */
+const LEASE_GRACE_MS = 30_000
 
 /**
  * The queue the routes hand to the Concierge: one per server process,
- * built once from the live env (kill switch included). In-memory only —
- * the durable queue is part of the G-03 tool bus.
+ * built once from the live env (kill switch included). G-03: the jobs live
+ * in the app's own LibSQL file (the matters DB URL, lib/matters/database-url
+ * is the single source), claimed with a lease, re-picked after a restart.
  */
 export function getSharedTaskRunnerQueue(env: NodeJS.ProcessEnv = process.env): TaskRunnerQueue {
   if (!sharedQueue) {
-    sharedQueue = createTaskRunnerQueue(taskRunnerQueueDeps(env), {
+    const url = mattersDatabaseUrl(env)
+    const db = createTaskRunnerDb({ url, authToken: mattersDatabaseAuthToken(url, env) })
+    sharedDb = db
+    sharedQueue = createDurableTaskRunnerQueue(taskRunnerQueueDeps(env), {
+      db,
       maxConcurrent: resolveTaskRunnerMaxConcurrent(env.CHATLEGAL_TASKRUNNER_MAX_CONCURRENT),
+      leaseMs: taskRunnerJobTimeoutMs(env) + LEASE_GRACE_MS,
     })
   }
   return sharedQueue
 }
 
-/** Tests only: drop the process-wide queue. */
-export function resetSharedTaskRunnerQueueForTests(): void {
+/** Tests only: drop the process-wide queue and close its database handle. */
+export async function resetSharedTaskRunnerQueueForTests(): Promise<void> {
+  const db = sharedDb
   sharedQueue = null
+  sharedDb = null
+  if (db) await db.close().catch(() => undefined)
 }
