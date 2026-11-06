@@ -16,10 +16,10 @@ import type { AskChoiceAnswer, MatterMessage, MatterObservations, MatterThreadSt
  * (bordered field, message label, send row). A send that fails or times out
  * stays in the queue and is tried again when the connection returns.
  * The send row names the default class (Small, chatlegal-1). It is not a picker.
- * Attachments, steer, and stop stay out: there is no agent run yet.
- * TODO(G-01 Concierge): emit askChoice from the model after Send stores the
- * user's words. The streamed plain-text reply landed with G-00.
- * A new matter already has a scripted first turn. The model does not emit askChoice yet.
+ * Attachments, steer, and stop stay out: there is no TaskRunner run yet (G-02).
+ * The Concierge (G-01) streams its reply after Send stores the person's
+ * words and can ask structured questions as C-04 cards on the thread.
+ * A new matter still opens on its scripted first turn.
  * The draft is kept against the open matter id.
  */
 export function ChatColumn({

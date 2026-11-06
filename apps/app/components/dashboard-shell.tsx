@@ -58,8 +58,9 @@ function PaneRail({ side, children }: { side: 'left' | 'right'; children: ReactN
  * chevron from LiteLLM docs, without that brand. hitly-net/hitly@94b2e92
  * is a fumadocs layout and has no pane pin to adapt.
  * Personal accounts only. Matters are Mastra threads for the signed-in user.
- * New chat stores a scripted first turn. Send stores the user's words on the open matter.
- * A model reply is not written. TODO(G-01 Concierge): stream that reply. The same open path can show a file
+ * New chat stores a scripted first turn. Send stores the user's words on the open
+ * matter. When LiteLLM is on, the Concierge agent (G-01) streams its reply and can
+ * ask the person structured questions as C-04 cards. The same open path can show a file
  * when Concierge asks; until then Open on a library file does it.
  * The right pane rests on chat state (dcolley/tourbillon@7a8595b
  * apps/web/components/chat/chat-context.tsx docks chat on the right).
@@ -278,6 +279,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               messages={mattersSession.messages}
               threadStatus={mattersSession.threadStatus}
               observations={mattersSession.observations}
+              replying={mattersSession.replying}
               viewMode={rightPane.mode}
               document={rightPane.document}
               onSelectView={selectView}

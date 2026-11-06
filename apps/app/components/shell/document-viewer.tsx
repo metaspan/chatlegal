@@ -9,6 +9,7 @@ import { FilePreview, useOpenedFileText, type OpenedFileBody } from '@/component
 import { MatterPaneViews } from '@/components/shell/matter-pane-views'
 import { MatterSummary } from '@/components/shell/matter-summary'
 import type { MatterViewMatter } from '@/lib/matters/matter-views'
+import { chatStateNarration } from '@/lib/matters/matter-views'
 import type { MatterMessage, MatterObservations, MatterThreadStatus } from '@/lib/matters/types'
 import { openedViewerLabel, type MatterPaneView, type OpenedDocument, type RestingPaneView } from '@/lib/right-pane'
 import type { ViewerKind } from '@/lib/viewer-kind'
@@ -48,6 +49,7 @@ export function DocumentViewer({
   observations = null,
   matter = null,
   messages = [],
+  replying = false,
   document = null,
   viewMode = 'chat-state',
   fileBody,
@@ -60,6 +62,8 @@ export function DocumentViewer({
   observations?: MatterObservations | null
   matter?: MatterViewMatter | null
   messages?: readonly MatterMessage[]
+  /** The Concierge stream is still filling the chat (G-01 narration). */
+  replying?: boolean
   /** Set only after an explicit open. Null is not a file. */
   document?: OpenedDocument | null
   viewMode?: RestingPaneView | 'document'
@@ -147,6 +151,19 @@ export function DocumentViewer({
               <Icon className="size-5" />
             </div>
             <MatterSummary matterId={matterId} status={threadStatus} observations={observations} />
+            {matterId && threadStatus === 'ready' ? (
+              <>
+                <h3 className="font-serif text-sm font-semibold">Where this chat stands</h3>
+                <p data-chat-state-narration className="text-sm leading-relaxed text-muted-foreground">
+                  {chatStateNarration({
+                    status: threadStatus,
+                    messageCount: messages.length,
+                    messages,
+                    replying,
+                  }) ?? 'Write what has happened, in your own words. This is not legal advice.'}
+                </p>
+              </>
+            ) : null}
           </>
         ) : (
           <MatterPaneViews
@@ -156,6 +173,7 @@ export function DocumentViewer({
             messages={messages}
             threadStatus={threadStatus}
             observations={observations}
+            replying={replying}
           />
         )}
       </div>

@@ -78,6 +78,10 @@ export function statusViewModel(input: {
   status: MatterThreadStatus
   messageCount: number
   observations: MatterObservations | null
+  /** Messages of the open chat. Used for the plain-language next line (G-01). */
+  messages?: readonly Pick<MatterMessage, 'role' | 'widget'>[]
+  /** True while the Concierge stream is still filling the chat (G-01). */
+  replying?: boolean
 }): { detail: string; rows: MatterViewRow[]; stub: string | null } {
   if (!input.matterId || input.status === 'idle') {
     return {
@@ -104,13 +108,42 @@ export function statusViewModel(input: {
   } else if (input.status === 'error') {
     summary = 'No summary yet.'
   }
+  const rows: MatterViewRow[] = [
+    { id: 'standing', label: 'Chat', value: standing },
+    { id: 'notes', label: 'Notes', value: notes },
+    { id: 'summary', label: 'Summary', value: summary },
+  ]
+  const next = chatStateNarration(input)
+  if (next) rows.push({ id: 'next', label: 'Next', value: next })
   return {
     detail: standing,
-    rows: [
-      { id: 'standing', label: 'Chat', value: standing },
-      { id: 'notes', label: 'Notes', value: notes },
-      { id: 'summary', label: 'Summary', value: summary },
-    ],
+    rows,
     stub: 'Stub. Waiting on a letter, or a similar status, is not stored yet.',
   }
+}
+
+/**
+ * One plain-language line on where the chat stands (G-01).
+ * Derived from what is on screen, in the citizen's terms only: a card
+ * waiting for a pick, the Concierge still replying, whose turn it is. It
+ * never names a tool, a model, or anything about how the software works,
+ * and it never speaks like a solicitor. Null when there is nothing to say.
+ */
+export function chatStateNarration(input: {
+  status: MatterThreadStatus
+  messageCount: number
+  messages?: readonly Pick<MatterMessage, 'role' | 'widget'>[]
+  replying?: boolean
+}): string | null {
+  if (input.status !== 'ready' || input.messageCount === 0) return null
+  const messages = input.messages ?? []
+  if (messages.length === 0) return null
+  if (input.replying) return 'ChatLegal is replying.'
+  const waiting = messages.find(
+    (message) => message.widget && message.widget.status === 'pending',
+  )
+  if (waiting) return 'One question is waiting for your answer.'
+  const last = messages[messages.length - 1]
+  if (last.role === 'assistant') return 'ChatLegal has replied. Write what happens next.'
+  return 'Your message is saved on this chat.'
 }

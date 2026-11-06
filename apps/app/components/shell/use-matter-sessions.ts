@@ -36,16 +36,17 @@ type MatterListResponse = { matters?: MatterSummary[] }
  * keeps the open matter and its draft attachment on the client.
  * Send appends the user's words on that matter. A failed or timed-out send
  * returns without dropping the caller's copy; the composer queue keeps it.
- * When LiteLLM is configured the Concierge reply streams back after the
- * append (G-00, lib/matters/chat-stream.ts). When it is off no model is
- * called and the send is only the append.
+ * When LiteLLM is configured the Concierge agent turn streams back after
+ * the append (G-00 text, G-01 agent: lib/llm/concierge-agent.ts). Its cards
+ * ride `assistant` events into the C-04 card path, and a `reset` event
+ * clears the half-shown copy when the agent throws a refused attempt away.
+ * When the gate is off no model is called and the send is only the append.
  * New chat opens the matter on its scripted first turn.
  * Rename stores the title on that thread. Archive hides it from this list
  * and leaves the thread stored. Show archived is a later slice.
  * An askChoice card already on the matter can be answered here. The pick is
- * stored on that same thread. A first-turn card may add a templated note.
- * TODO(G-01 Concierge): emit askChoice from the model, and add its tools and
- * protocol packs. The streamed text reply landed with G-00.
+ * stored on that same thread. A first-turn card adds a templated note. A
+ * card the Concierge asked for resumes its run over the same stream.
  */
 export function useMatterSessions() {
   const [matters, setMatters] = useState<MatterSummary[]>([])
@@ -60,6 +61,8 @@ export function useMatterSessions() {
   const [sendError, setSendError] = useState<string | null>(null)
   const [answeringWidgetId, setAnsweringWidgetId] = useState<string | null>(null)
   const [widgetError, setWidgetError] = useState<{ toolCallId: string; message: string } | null>(null)
+  /** The Concierge stream still fills this matter in the background (G-01). */
+  const [replyingId, setReplyingId] = useState<string | null>(null)
   const activeIdRef = useRef<string | null>(null)
   const threadRef = useRef<OpenMatter | null>(null)
   const mattersRef = useRef<MatterSummary[]>([])
@@ -217,6 +220,7 @@ export function useMatterSessions() {
         const savedArrived = new Promise<boolean>((resolve) => {
           resolveSaved = resolve
         })
+        setReplyingId(matterId)
         const consumeStream = async () => {
           try {
             for await (const event of iterateMatterStreamEvents(response)) {
@@ -232,6 +236,16 @@ export function useMatterSessions() {
                 setThread((current) =>
                   current && current.matter.id === matterId
                     ? { ...current, messages: messagesWithStreamingAssistant(current.messages, replyId, shown) }
+                    : current,
+                )
+                continue
+              }
+              if (event.type === 'reset') {
+                // The agent threw a refused attempt away and is answering again.
+                streamedText = ''
+                setThread((current) =>
+                  current && current.matter.id === matterId
+                    ? { ...current, messages: messagesWithoutMessage(current.messages, replyId) }
                     : current,
                 )
                 continue
@@ -274,6 +288,7 @@ export function useMatterSessions() {
                 : current,
             )
           }
+          setReplyingId((current) => (current === matterId ? null : current))
           resolveSaved(false)
         }
         void consumeStream()
@@ -311,6 +326,7 @@ export function useMatterSessions() {
     if (!widget || widget.status === 'answered') return false
     const snapshot = current?.messages ?? []
     const answeredAt = new Date().toISOString()
+    const viewing = () => activeIdRef.current === matterId
     sendSeq.current += 1
     setWidgetError(null)
     setAnsweringWidgetId(toolCallId)
@@ -328,6 +344,104 @@ export function useMatterSessions() {
           cache: 'no-store',
         },
       )
+      if (isMatterStreamResponse(response)) {
+        // A card the Concierge asked for (G-01): the pick is stored and the
+        // run resumes over the same NDJSON protocol as Send. The first
+        // assistant event is the stored, answered card; the rest stream the
+        // Concierge's reaction. A failure after the card only costs the
+        // reaction: the pick itself is stored.
+        const replyId = `local:assistant:${matterId}:answer:${sendSeq.current}`
+        let streamedText = ''
+        let cardSettled = false
+        let resolveSettled: (settled: boolean) => void = () => {}
+        const cardArrived = new Promise<boolean>((resolve) => {
+          resolveSettled = resolve
+        })
+        setReplyingId(matterId)
+        const consumeResume = async () => {
+          try {
+            for await (const event of iterateMatterStreamEvents(response)) {
+              if (event.type === 'assistant') {
+                const saved = presentStoredMatterMessage(event.message)
+                const isFirst = !cardSettled
+                cardSettled = true
+                resolveSettled(true)
+                if (viewing()) {
+                  setThread((open) => {
+                    if (!open || open.matter.id !== matterId) return open
+                    const next = isFirst
+                      ? messagesReplacing(open.messages, saved)
+                      : messagesWithSaved(open.messages, replyId, saved)
+                    return {
+                      ...open,
+                      matter: { ...open.matter, updatedAt: saved.widget?.answeredAt ?? saved.createdAt },
+                      messages: next,
+                    }
+                  })
+                  setMatters((current) =>
+                    current
+                      .map((matter) =>
+                        matter.id === matterId
+                          ? { ...matter, updatedAt: saved.widget?.answeredAt ?? saved.createdAt }
+                          : matter,
+                      )
+                      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id)),
+                  )
+                }
+                continue
+              }
+              if (viewing()) {
+                if (event.type === 'delta') {
+                  streamedText += event.text
+                  const shown = streamedText
+                  setThread((open) =>
+                    open && open.matter.id === matterId
+                      ? { ...open, messages: messagesWithStreamingAssistant(open.messages, replyId, shown) }
+                      : open,
+                  )
+                  continue
+                }
+                if (event.type === 'reset') {
+                  streamedText = ''
+                  setThread((open) =>
+                    open && open.matter.id === matterId
+                      ? { ...open, messages: messagesWithoutMessage(open.messages, replyId) }
+                      : open,
+                  )
+                  continue
+                }
+                if (event.type === 'error') {
+                  setThread((open) =>
+                    open && open.matter.id === matterId
+                      ? { ...open, messages: messagesWithoutMessage(open.messages, replyId) }
+                      : open,
+                  )
+                  setSendError(event.message)
+                }
+              }
+            }
+          } catch {
+            // The resume stream dropped. The pick is already stored; only
+            // the Concierge's reaction is missing, and the partial is gone.
+          }
+          if (viewing()) {
+            setThread((open) =>
+              open && open.matter.id === matterId
+                ? { ...open, messages: messagesWithoutMessage(open.messages, replyId) }
+                : open,
+            )
+          }
+          setReplyingId((current) => (current === matterId ? null : current))
+          resolveSettled(false)
+        }
+        void consumeResume()
+        const settled = await cardArrived
+        if (!settled) {
+          void response.body?.cancel().catch(() => {})
+          throw new Error('answer')
+        }
+        return true
+      }
       const body = (await response.json().catch(() => null)) as { message?: unknown; followUp?: unknown } | null
       const saved = body && isStoredMatterMessage(body.message) ? presentStoredMatterMessage(body.message) : null
       const followUp = body && isStoredMatterMessage(body.followUp) ? presentStoredMatterMessage(body.followUp) : null
@@ -485,6 +599,7 @@ export function useMatterSessions() {
     creating,
     archivingId,
     sending: sendingId !== null && sendingId === activeId,
+    replying: replyingId !== null && replyingId === activeId,
     sendError,
     answeringWidgetId,
     widgetError,

@@ -1,7 +1,8 @@
 /**
  * Scripted first turn for a new matter.
- * Information and triage only. No model is called. TODO(G-01 Concierge): a later
- * run may continue after this template. G-00 stays on hold, so this file does not.
+ * Information and triage only. No model is called. The two scripted cards
+ * keep their templated notes when answered; the G-01 Concierge resumes with
+ * a model turn only for cards it asked for itself.
  *
  * Copy is locked to docs/policies/05-genai-disclosure.md (session notice and the
  * answer label), docs/policies/01-code-of-ethics.md (not a solicitor; escalate

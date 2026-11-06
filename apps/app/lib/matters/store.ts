@@ -289,8 +289,8 @@ function messageCreatedAt(value: Date | undefined): Date {
  * Records a message on a matter the user owns.
  * The centre composer calls this for the user's own words.
  * The scripted first turn also stores its notice here.
- * TODO(G-01 Concierge): stream the assistant reply after that message is stored.
- * This function does not call a model.
+ * The Concierge's replies are stored here too, by the G-01 agent loop
+ * (lib/llm/concierge-agent.ts). This function does not call a model.
  */
 export async function appendMatterMessage(
   store: MatterStore,
@@ -372,7 +372,9 @@ function toMatterMessage(message: {
 
 /**
  * Stores an askChoice card on a matter the user owns.
- * There is no model call. TODO(G-01 Concierge): call this when the model asks.
+ * The G-01 Concierge stores its own cards through here when the model calls
+ * the askChoice tool (lib/llm/concierge-agent.ts), and the C-04 route and
+ * the scripted first turn use it too. This function does not call a model.
  */
 export async function appendAskChoice(
   store: MatterStore,

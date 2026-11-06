@@ -82,6 +82,46 @@ describe('matter chat stream (G-00)', () => {
     })
   })
 
+  it('parses reset events, and cards riding assistant events (G-01)', async () => {
+    assert.deepEqual(parseMatterStreamEvent('{"type":"reset"}'), { type: 'reset' })
+
+    const cardMessage = {
+      id: 'w1',
+      role: 'assistant',
+      text: '',
+      createdAt: '2026-11-06T09:00:01.000Z',
+      widget: {
+        name: 'askChoice',
+        toolCallId: 'tc-1',
+        version: 1,
+        status: 'pending',
+        question: 'Do you have the letter?',
+        options: [
+          { id: 'a', label: 'A' },
+          { id: 'b', label: 'B' },
+        ],
+        multiSelect: false,
+        minSelected: 1,
+        maxSelected: 1,
+      },
+    }
+    const events = await collect(
+      streamResponse([
+        '{"type":"reset"}',
+        JSON.stringify({ type: 'assistant', message: cardMessage }),
+      ]),
+    )
+    assert.deepEqual(events, [{ type: 'reset' }, { type: 'assistant', message: cardMessage }])
+
+    // A card that fails the C-04 shape drops the whole event, not just the card.
+    assert.equal(
+      parseMatterStreamEvent(
+        JSON.stringify({ type: 'assistant', message: { ...cardMessage, widget: { name: 'askChoice' } } }),
+      ),
+      null,
+    )
+  })
+
   it('grows one pending assistant copy while streaming, then drops it', () => {
     const before = [stored('user', 'Hello')]
     const once = messagesWithStreamingAssistant(before, 'local:a1', 'Hi ')

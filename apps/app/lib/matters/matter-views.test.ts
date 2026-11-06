@@ -1,6 +1,12 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { datesViewModel, partiesViewCopy, statusViewModel } from './matter-views.ts'
+import {
+  chatStateNarration,
+  datesViewModel,
+  partiesViewCopy,
+  statusViewModel,
+} from './matter-views.ts'
+import type { MatterMessage } from './types.ts'
 
 const matter = {
   id: 'matter-1',
@@ -58,5 +64,82 @@ describe('matter pane views', () => {
     assert.match(open.rows.find((row) => row.id === 'summary')?.value ?? '', /summary is saved/)
     assert.match(open.stub ?? '', /^Stub\./)
     assert.doesNotMatch(open.rows.map((row) => row.value).join(' '), /waiting on a letter/i)
+  })
+
+  it('narrates where the chat stands, in citizen words (G-01)', () => {
+    const card = (status: 'pending' | 'answered'): Pick<MatterMessage, 'role' | 'widget'> => ({
+      role: 'assistant',
+      widget: {
+        name: 'askChoice',
+        toolCallId: 'tc-1',
+        version: 1,
+        status,
+        question: 'Do you have the letter?',
+        options: [],
+        multiSelect: false,
+        minSelected: 1,
+        maxSelected: 1,
+      },
+    })
+    const plain = (role: 'user' | 'assistant'): Pick<MatterMessage, 'role' | 'widget'> => ({ role })
+    const base = { status: 'ready' as const, messageCount: 2 }
+
+    // A waiting card puts the turn with the person, in plain words.
+    assert.match(
+      chatStateNarration({ ...base, messages: [plain('user'), card('pending')] }) ?? '',
+      /waiting for your answer/i,
+    )
+    // An answered card stops the nagging.
+    assert.doesNotMatch(
+      chatStateNarration({ ...base, messages: [plain('user'), card('answered')] }) ?? '',
+      /waiting for your answer/i,
+    )
+    // A reply in progress is narrated without naming the machinery.
+    assert.match(
+      chatStateNarration({ ...base, messages: [plain('user')], replying: true }) ?? '',
+      /replying/i,
+    )
+    // Whose turn it is, from the last note.
+    assert.match(
+      chatStateNarration({ ...base, messages: [plain('user'), plain('assistant')] }) ?? '',
+      /write what happens next/i,
+    )
+    assert.match(
+      chatStateNarration({ status: 'ready', messageCount: 1, messages: [plain('user')] }) ?? '',
+      /message is saved/i,
+    )
+    // Nothing to say before there are notes, and nothing while loading.
+    assert.equal(chatStateNarration({ status: 'ready', messageCount: 0, messages: [] }), null)
+    assert.equal(chatStateNarration({ status: 'loading', messageCount: 2, messages: [plain('user')] }), null)
+
+    // The narration never names tool/model/software internals (the no-dump ban).
+    for (const line of [
+      chatStateNarration({ ...base, messages: [plain('user'), card('pending')] }),
+      chatStateNarration({ ...base, messages: [plain('user')], replying: true }),
+      chatStateNarration({ ...base, messages: [plain('user'), plain('assistant')] }),
+    ]) {
+      const haystack = (line ?? '').toLowerCase()
+      for (const banned of ['tool', 'json', 'prompt', 'model', 'litellm', 'token', 'widget', 'agent']) {
+        assert.ok(!haystack.includes(banned), `narration must not contain "${banned}"`)
+      }
+    }
+  })
+
+  it('adds the plain-language Next row to the status view', () => {
+    const view = statusViewModel({
+      matterId: 'matter-1',
+      status: 'ready',
+      messageCount: 2,
+      observations: null,
+      messages: [
+        { role: 'user' },
+        { role: 'assistant' },
+      ],
+    })
+    assert.equal(view.rows.find((row) => row.id === 'next')?.value, 'ChatLegal has replied. Write what happens next.')
+
+    // No messages: no Next row.
+    const quiet = statusViewModel({ matterId: 'matter-1', status: 'ready', messageCount: 0, observations: null })
+    assert.equal(quiet.rows.find((row) => row.id === 'next'), undefined)
   })
 })

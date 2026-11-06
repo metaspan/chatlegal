@@ -11,9 +11,11 @@ type RouteContext = { params: Promise<{ matterId: string }> }
 
 /**
  * Stores an askChoice card on the signed-in user's matter (`clerk:<userId>`).
- * This is the stub until a model can ask. TODO(G-01 Concierge): call
- * appendAskChoice from the model tool instead of this route.
- * This route does not call a model.
+ * The Concierge agent asks for its own cards now (G-01, see
+ * lib/llm/concierge-agent.ts: the model calls the askChoice tool and the
+ * loop stores it through appendAskChoice). This route stays for the direct
+ * C-04 card path the tests and any host-side seeding use. This route does
+ * not call a model.
  */
 export async function POST(request: Request, context: RouteContext) {
   const session = await requireConsumerSession()
