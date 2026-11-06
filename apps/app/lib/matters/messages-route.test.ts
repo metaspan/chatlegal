@@ -176,7 +176,7 @@ describe('matter message route', () => {
     })
   })
 
-  it('runs the Concierge agent turn behind the gate, with the G-02 note in place', () => {
+  it('runs the Concierge agent turn behind the gate, with the G-03 note in place', () => {
     const source = fs.readFileSync(
       path.join(path.dirname(fileURLToPath(import.meta.url)), '../../app/api/matters/[matterId]/messages/route.ts'),
       'utf8',
@@ -185,8 +185,8 @@ describe('matter message route', () => {
     assert.match(source, /streamConciergeTurn/)
     assert.match(source, /role: 'user'/)
     assert.match(source, /isLiteLLMEnabled\(\)/)
-    // G-02+ stays out of this route.
-    assert.match(source, /TODO\(G-02\+\)/)
+    // G-02 landed the TaskRunner handoff queue; the G-03+ tool bus stays out.
+    assert.match(source, /TODO\(G-03\+\)/)
     // No direct model SDK in the route: the call lives behind the gate in lib/llm.
     assert.doesNotMatch(source, /generateText|streamText|openai|CHATLEGAL_OM_MODEL/)
   })
@@ -271,12 +271,14 @@ describe('matter message route', () => {
         assert.equal(thread?.messages[2].widget?.status, 'pending')
         assert.doesNotMatch(JSON.stringify(thread?.messages), /tool_calls|"arguments"/)
 
-        // The outbound call offered the askChoice function once.
+        // The outbound call offered the askChoice function once, next to
+        // the G-02 handoff function (the TaskRunner queue is always wired
+        // behind the same gate; a model that never hands off never sees it).
         assert.equal(calls.length, 1)
         const outbound = JSON.parse(String(calls[0].init.body)) as {
           tools?: { type: string; function: { name: string } }[]
         }
-        assert.deepEqual(outbound.tools?.map((tool) => tool.function.name), ['askChoice'])
+        assert.deepEqual(outbound.tools?.map((tool) => tool.function.name), ['askChoice', 'hand_off_to_task_runner'])
       } finally {
         globalThis.fetch = originalFetch
         await disconnectMatterStore()

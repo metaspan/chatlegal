@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { isLiteLLMEnabled } from '@/lib/llm/config'
 import { CONCIERGE_REPLY_FAILED } from '@/lib/llm/concierge-reply'
 import { streamConciergeTurn } from '@/lib/llm/concierge-agent'
+import { getSharedTaskRunnerQueue } from '@/lib/llm/task-runner'
 import { MatterWidgetError, parseJsonObject } from '@/lib/matters/ask-choice'
 import { MATTER_STREAM_CONTENT_TYPE, type MatterStreamEvent } from '@/lib/matters/chat-stream'
 import { presentStoredMatterMessage } from '@/lib/matters/message'
@@ -106,7 +107,14 @@ function conciergeResumeStream(
     async start(controller) {
       try {
         controller.enqueue(line({ type: 'assistant', message: presentStoredMatterMessage(answered) }))
-        for await (const event of streamConciergeTurn({ store, userId, matterId })) {
+        for await (const event of streamConciergeTurn({
+          store,
+          userId,
+          matterId,
+          // G-02: the resumed turn may also hand off, and it is a natural
+          // place to narrate a background result that finished meanwhile.
+          taskRunner: { queue: getSharedTaskRunnerQueue() },
+        })) {
           controller.enqueue(line(event))
         }
       } catch (error) {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { isLiteLLMEnabled } from '@/lib/llm/config'
 import { CONCIERGE_REPLY_FAILED } from '@/lib/llm/concierge-reply'
 import { streamConciergeTurn } from '@/lib/llm/concierge-agent'
+import { getSharedTaskRunnerQueue } from '@/lib/llm/task-runner'
 import { MATTER_STREAM_CONTENT_TYPE, type MatterStreamEvent } from '@/lib/matters/chat-stream'
 import { MatterMessageError, parseMatterMessageBody } from '@/lib/matters/message'
 import { appendMatterMessage, getMatterStore, type MatterStore } from '@/lib/matters/store'
@@ -27,8 +28,10 @@ type RouteContext = { params: Promise<{ matterId: string }> }
  * resolves server-side in lib/llm (the Small class label maps to the
  * Concierge alias there, not here).
  *
- * TODO(G-02+): tools other than askChoice, TaskRunner, and protocol packs
- * stay out. This route only runs the Concierge turn.
+ * TODO(G-03+): the full tool bus with permissions and protocol packs stay
+ * out. G-02 added only the Concierge's one hand_off_to_task_runner call and
+ * the in-process TaskRunner queue (lib/task-runner/queue.ts); the durable
+ * queue and real tools are G-03. This route only runs the Concierge turn.
  */
 export async function POST(request: Request, context: RouteContext) {
   const session = await requireConsumerSession()
@@ -79,7 +82,16 @@ function matterReplyStream(
     async start(controller) {
       try {
         if (userMessage) controller.enqueue(line({ type: 'user', message: userMessage }))
-        for await (const event of streamConciergeTurn({ store, userId, matterId, userText })) {
+        for await (const event of streamConciergeTurn({
+          store,
+          userId,
+          matterId,
+          userText,
+          // G-02: the Concierge may hand background work to the TaskRunner
+          // queue. Off (no LiteLLM key) nothing is ever enqueued, and the
+          // Concierge never sees the handoff tool — the G-01 path.
+          taskRunner: { queue: getSharedTaskRunnerQueue() },
+        })) {
           controller.enqueue(line(event))
         }
       } catch (error) {
