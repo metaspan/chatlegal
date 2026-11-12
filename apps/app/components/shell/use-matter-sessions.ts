@@ -18,6 +18,7 @@ import {
   presentStoredMatterMessage,
   resolveMatterMessageText,
 } from '@/lib/matters/message'
+import { mergeRestoredMatter } from '@/lib/matters/archived'
 import { matterOpenedFromCreate } from '@/lib/matters/first-turn'
 import { isMatterObservations } from '@/lib/matters/present'
 import type { AskChoiceAnswer, MatterMessage, MatterObservations, MatterSummary, MatterThread, MatterThreadStatus } from '@/lib/matters/types'
@@ -553,6 +554,17 @@ export function useMatterSessions() {
     }
   }
 
+  /**
+   * Puts a chat back in the history list after the C-18 modal unarchives it
+   * (PATCH archived:false already cleared the C-12 flag on the server).
+   * Reading an archived chat does not come through here: it stays archived
+   * until Unarchive is used. Nothing here deletes or purges.
+   */
+  function restoreMatter(matter: MatterSummary) {
+    hiddenIds.current.delete(matter.id)
+    setMatters((current) => mergeRestoredMatter(current, matter))
+  }
+
   async function createMatterSession() {
     setCreating(true)
     setListError(null)
@@ -607,6 +619,7 @@ export function useMatterSessions() {
     createMatterSession,
     renameMatter,
     archiveMatter,
+    restoreMatter,
     sendMessage,
     answerWidget,
   }

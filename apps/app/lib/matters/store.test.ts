@@ -14,8 +14,10 @@ import {
   createMatter,
   createMatterStore,
   getMatterThread,
+  listArchivedMatters,
   listMatters,
   renameMatter,
+  unarchiveMatter,
   type MatterStore,
 } from './store.ts'
 
@@ -94,6 +96,28 @@ describe('mastra matter store', () => {
       assert.equal(raw?.resourceId, 'clerk:user_a')
       assert.equal(raw?.metadata?.kind, 'matter')
       assert.equal(typeof raw?.metadata?.archivedAt, 'string')
+
+      // C-18: the archived set reads through its own list, ownership holds,
+      // and unarchive restores the chat without touching its messages.
+      const archivedOnly = await listArchivedMatters(store, 'user_a')
+      assert.deepEqual(archivedOnly.map((matter) => matter.id), [own.id])
+      assert.deepEqual(await listArchivedMatters(store, 'user_b'), [])
+      assert.equal(await unarchiveMatter(store, 'user_b', own.id), null)
+
+      const restored = await unarchiveMatter(store, 'user_a', own.id)
+      assert.equal(restored?.title, 'Deposit')
+      assert.deepEqual(await listArchivedMatters(store, 'user_a'), [])
+      assert.deepEqual((await listMatters(store, 'user_a')).map((matter) => matter.id), [own.id])
+      const restoredThread = await getMatterThread(store, 'user_a', own.id)
+      assert.equal(restoredThread?.messages[0]?.text, 'The notice arrived on Friday.')
+      const cleared = await store.memory.getThreadById({ threadId: own.id, resourceId: matterResourceId('user_a') })
+      assert.equal(cleared?.metadata?.kind, 'matter')
+      assert.notEqual(typeof cleared?.metadata?.archivedAt, 'string')
+
+      // Unarchiving a chat that is not archived is a no-op success.
+      const again = await unarchiveMatter(store, 'user_a', own.id)
+      assert.equal(again?.id, own.id)
+      assert.deepEqual((await listMatters(store, 'user_a')).map((matter) => matter.id), [own.id])
     })
   })
 

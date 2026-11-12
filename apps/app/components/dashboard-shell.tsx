@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { ChatColumn } from '@/components/chat/chat-column'
+import { ArchivedChatsModal } from '@/components/shell/archived-chats-modal'
 import { DisclaimerBar } from '@/components/disclaimer-bar'
 import { AppBar } from '@/components/shell/app-bar'
 import { DocumentViewer } from '@/components/shell/document-viewer'
@@ -10,6 +11,7 @@ import { HistoryPane } from '@/components/shell/history-pane'
 import { PaneEdgeToggle } from '@/components/shell/pane-edge-toggle'
 import { ActiveMatterProvider } from '@/components/shell/active-matter'
 import { RightPaneActionsProvider, type RightPaneOpenRequest } from '@/components/shell/right-pane-actions'
+import { useArchivedMatters } from '@/components/shell/use-archived-matters'
 import { useMatterSessions } from '@/components/shell/use-matter-sessions'
 import { usePaneOpen } from '@/components/shell/use-pane-open'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -77,6 +79,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const [query, setQuery] = useState('')
   const mattersSession = useMatterSessions()
+  const [archivedOpen, setArchivedOpen] = useState(false)
+  const [archivedQuery, setArchivedQuery] = useState('')
+  const archivedSession = useArchivedMatters({
+    onRestored: (matter) => mattersSession.restoreMatter(matter),
+  })
   const [rightPane, setRightPane] = useState<RightPaneView>(() => defaultRightPaneView())
   const activeMatterId = mattersSession.activeId
   const isMobile = useIsMobile()
@@ -230,6 +237,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               }}
               archivingId={mattersSession.archivingId}
               onCollapse={() => (narrow ? setMobileLeft(false) : setLeftOpen(false))}
+              onOpenArchived={() => {
+                setArchivedQuery('')
+                archivedSession.reload()
+                setArchivedOpen(true)
+              }}
               libraryActive={pathname === '/library'}
             />
             {leftOpen ? (
@@ -294,6 +306,31 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </PaneRail>
         ) : null}
       </div>
+      <ArchivedChatsModal
+        open={archivedOpen}
+        onOpenChange={setArchivedOpen}
+        rows={archivedSession.archived.map((matter) => ({
+          id: matter.id,
+          title: matter.title,
+          detail: matterHistoryDetail(matter),
+        }))}
+        loaded={archivedSession.loaded}
+        listError={archivedSession.listError}
+        query={archivedQuery}
+        onQueryChange={setArchivedQuery}
+        onOpen={(id) => {
+          // Read the chat. The archive flag stays set; only the modal's
+          // restore action returns a chat to the history list.
+          mattersSession.choose(id)
+          if (narrow) setMobileLeft(false)
+          setArchivedOpen(false)
+        }}
+        onUnarchive={(id) => {
+          void archivedSession.unarchiveMatter(id)
+        }}
+        unarchivingId={archivedSession.unarchivingId}
+        onRetry={() => archivedSession.reload()}
+      />
       <DisclaimerBar />
     </div>
     </ActiveMatterProvider>
