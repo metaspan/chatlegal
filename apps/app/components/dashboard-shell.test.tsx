@@ -312,6 +312,22 @@ describe('dashboard shell', () => {
     assert.match(disclaimer, /data-disclosure-footer/)
     assert.match(disclaimer, /AI-generated information — check the sources\./)
     assert.match(disclaimer, /Not a solicitor\. Not legal advice\./)
+    // C-17: the whole disclaimer is ONE continuous line — the exact sentence
+    // appears as a single run of text with no tag boundary inside it, and it
+    // is never split across two block elements.
+    const disclaimerText = disclaimer.replace(/<[^>]*>/g, '')
+    assert.equal(
+      disclaimerText.trim(),
+      'AI-generated information — check the sources. Not a solicitor. Not legal advice.',
+    )
+    assert.match(disclaimer, /AI-generated information — check the sources\. Not a solicitor\. Not legal advice\./)
+    assert.doesNotMatch(disclaimer, /sources\.\s*<\/p>/)
+    assert.doesNotMatch(disclaimer, /<\/p[^>]*>\s*<p[^>]*>Not a solicitor/)
+    // Wrapping must be natural word-wrap: nothing that could overflow or
+    // clip the sentence at a narrow width.
+    assert.doesNotMatch(disclaimer, /whitespace-nowrap|text-nowrap|overflow-hidden|overflow-clip|truncate/)
+    const disclaimerSource = fs.readFileSync(path.join(here, 'disclaimer-bar.tsx'), 'utf8')
+    assert.doesNotMatch(disclaimerSource, /whitespace-nowrap|text-nowrap|overflow-hidden|overflow-clip|truncate/)
     // C-16 (locked 3 Nov): the deferred second-language footer line is gone
     // and must never render again — guard against reintroduction.
     assert.doesNotMatch(disclaimer, /lang="cy"|Cymraeg|Welsh/i)
