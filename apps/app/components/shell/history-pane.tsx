@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { EllipsisVertical, Library, PanelLeftClose, Plus, Search } from 'lucide-react'
 import { PlanUsageCard } from '@/components/shell/plan-usage-card'
+import { ArchivedChatsTrigger } from '@/components/shell/archived-chats-modal'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -30,7 +31,8 @@ import { cn } from '@/lib/utils'
  * Collapse is the existing pane control.
  * File lists and the add form live on /library, not in this pane.
  * Each row is one chat. Archive hides a row. The thread stays stored.
- * Show archived is a later slice.
+ * The C-18 "Archived chats" modal (trigger below Library) lists, searches,
+ * reads, and restores those hidden rows.
  * The plan card is pinned under the list so it stays in view while history scrolls.
  * The shell ignores Escape while focus is inside a menu, so the menu closes first.
  */
@@ -48,6 +50,7 @@ export function HistoryPane({
   onArchive,
   archivingId,
   onCollapse,
+  onOpenArchived,
   libraryActive = false,
 }: {
   query: string
@@ -63,6 +66,7 @@ export function HistoryPane({
   onArchive: (id: string) => void
   archivingId: string | null
   onCollapse: () => void
+  onOpenArchived: () => void
   libraryActive?: boolean
 }) {
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -151,6 +155,9 @@ export function HistoryPane({
           <Library className="size-4 shrink-0 text-muted-foreground" />
           Library
         </Link>
+        <div className="pt-1">
+          <ArchivedChatsTrigger onClick={onOpenArchived} />
+        </div>
       </nav>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
         <h2 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">History</h2>

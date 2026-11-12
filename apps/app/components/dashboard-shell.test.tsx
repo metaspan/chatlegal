@@ -248,6 +248,9 @@ describe('dashboard shell', () => {
     assert.match(history, /href="\/library"/)
     assert.match(history, /data-library-nav/)
     assert.match(history, /History/)
+    // C-18: the archived-chats trigger sits in this pane, by the history controls.
+    assert.match(history, /data-archived-chats-nav/)
+    assert.match(history, /Archived chats/)
     assert.doesNotMatch(history, /data-library-file|data-matter-file|data-library-scope|Add a file|File name|Move to/)
     assert.doesNotMatch(history, /No files yet/)
     assert.match(history, /Each row is one chat/)
@@ -426,6 +429,10 @@ describe('dashboard shell', () => {
     const bar = fs.readFileSync(path.join(here, 'shell/app-bar.tsx'), 'utf8')
     const combined = shell + bar
     assert.match(shell, /HistoryPane/)
+    // C-18: the shell owns the Archived chats modal and its archived set.
+    assert.match(shell, /ArchivedChatsModal/)
+    assert.match(shell, /useArchivedMatters/)
+    assert.match(shell, /restoreMatter/)
     assert.match(shell, /libraryActive=\{pathname === '\/library'\}/)
     assert.match(shell, /usePathname/)
     assert.match(shell, /useMatterSessions/)
@@ -601,6 +608,7 @@ function historyProps() {
     onArchive: () => {},
     archivingId: null,
     onCollapse: () => {},
+    onOpenArchived: () => {},
   }
 }
 

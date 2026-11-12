@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { MatterTitleError } from '@/lib/matters/title'
-import { archiveMatter, getMatterStore, getMatterThread, renameMatter } from '@/lib/matters/store'
+import { archiveMatter, getMatterStore, getMatterThread, renameMatter, unarchiveMatter } from '@/lib/matters/store'
 import { requireConsumerSession } from '@/lib/session-guards'
 
 export const runtime = 'nodejs'
@@ -15,7 +15,7 @@ class MatterRequestError extends Error {
   }
 }
 
-type MatterPatch = { title?: string; archived?: true }
+type MatterPatch = { title?: string; archived?: true; unarchived?: true }
 
 async function readMatterPatch(request: Request): Promise<MatterPatch> {
   const text = await request.text()
@@ -36,10 +36,13 @@ async function readMatterPatch(request: Request): Promise<MatterPatch> {
     patch.title = record.title
   }
   if ('archived' in record) {
-    if (record.archived !== true) throw new MatterRequestError('Archive can only hide a chat.')
-    patch.archived = true
+    // C-18: archived=true hides the chat (C-12 path), archived=false
+    // restores it to the list. Only these two values are accepted.
+    if (record.archived === true) patch.archived = true
+    else if (record.archived === false) patch.unarchived = true
+    else throw new MatterRequestError('Archive must be true or false.')
   }
-  if (patch.title === undefined && patch.archived !== true) {
+  if (patch.title === undefined && patch.archived !== true && patch.unarchived !== true) {
     throw new MatterRequestError('Say what to change.')
   }
   return patch
@@ -59,8 +62,9 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 /**
- * Renames a matter or hides it from the default list.
- * Archive keeps the thread. This route does not delete messages and does not call a model.
+ * Renames a matter, hides it from the default list, or restores it.
+ * Archive and unarchive keep the thread. This route does not delete
+ * messages and does not call a model.
  */
 export async function PATCH(request: Request, context: RouteContext) {
   const session = await requireConsumerSession()
@@ -74,6 +78,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
     if (patch.archived) {
       matter = await archiveMatter(store, session.userId, matterId)
+      if (!matter) return NextResponse.json({ error: 'Chat not found.' }, { status: 404 })
+    }
+    if (patch.unarchived) {
+      matter = await unarchiveMatter(store, session.userId, matterId)
       if (!matter) return NextResponse.json({ error: 'Chat not found.' }, { status: 404 })
     }
     if (!matter) return NextResponse.json({ error: 'Say what to change.' }, { status: 400 })

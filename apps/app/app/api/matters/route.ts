@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { seedMatterFirstTurn } from '@/lib/matters/seed-first-turn'
 import { MatterTitleError } from '@/lib/matters/title'
-import { createMatter, getMatterStore, listMatters } from '@/lib/matters/store'
+import { createMatter, getMatterStore, listArchivedMatters, listMatters } from '@/lib/matters/store'
 import { requireConsumerSession } from '@/lib/session-guards'
 
 export const runtime = 'nodejs'
@@ -32,14 +32,28 @@ async function readTitle(request: Request): Promise<string | undefined> {
   return title
 }
 
-export async function GET() {
+export async function GET(request?: Request) {
   const session = await requireConsumerSession()
+  // ?archived=true answers the "Archived chats" list (C-18). It is a read
+  // over the same archive flag the C-12 archive uses; it never deletes.
+  const archivedOnly = request ? readArchivedFlag(request) : false
   try {
-    const matters = await listMatters(await getMatterStore(), session.userId)
+    const store = await getMatterStore()
+    const matters = archivedOnly
+      ? await listArchivedMatters(store, session.userId)
+      : await listMatters(store, session.userId)
     return NextResponse.json({ matters })
   } catch (error) {
     console.error('list matters failed', error)
     return NextResponse.json({ error: 'Chats could not be loaded.' }, { status: 500 })
+  }
+}
+
+function readArchivedFlag(request: Request): boolean {
+  try {
+    return new URL(request.url).searchParams.get('archived') === 'true'
+  } catch {
+    return false
   }
 }
 

@@ -72,7 +72,16 @@ describe('signed-in pages guard the session', () => {
     for (const file of files) {
       const source = fs.readFileSync(file, 'utf8')
       assert.match(source, /requireConsumerSession/)
-      assert.doesNotMatch(source, /searchParams|userId=/)
+      assert.doesNotMatch(source, /userId=/)
+      if (file.endsWith('api/matters/route.ts')) {
+        // C-18: the list route reads exactly one query parameter, the
+        // read-only archived flag (?archived=true). It is not an identity
+        // parameter — the list stays scoped to requireConsumerSession().
+        assert.match(source, /searchParams\.get\('archived'\)/)
+        assert.doesNotMatch(source, /searchParams\.get\((?!'archived')/)
+      } else {
+        assert.doesNotMatch(source, /searchParams/)
+      }
     }
   })
 

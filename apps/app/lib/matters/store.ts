@@ -128,13 +128,21 @@ function isArchivedMatter(thread: StorageThreadType): boolean {
   return readArchivedAt(thread) !== null
 }
 
-function matterThreadMetadata(thread: StorageThreadType, patch: { archivedAt?: string } = {}): StorageThreadType['metadata'] {
-  const archivedAt = patch.archivedAt ?? readArchivedAt(thread) ?? undefined
+function matterThreadMetadata(
+  thread: StorageThreadType,
+  patch: { archivedAt?: string | null } = {},
+): StorageThreadType['metadata'] {
+  // storage.updateThread MERGES metadata, so an omitted archivedAt survives.
+  // Clearing it has to write the key back as null — readArchivedAt counts a
+  // non-string value as not archived.
+  const metadata = { ...(thread.metadata ?? {}) } as Record<string, unknown>
+  delete metadata.archivedAt
+  const archivedAt = patch.archivedAt === null ? null : (patch.archivedAt ?? readArchivedAt(thread))
   return {
-    ...(thread.metadata ?? {}),
+    ...metadata,
     kind: MATTER_KIND,
-    ...(archivedAt ? { archivedAt } : {}),
-  }
+    ...(archivedAt ? { archivedAt } : patch.archivedAt === null ? { archivedAt: null } : {}),
+  } as StorageThreadType['metadata']
 }
 
 export async function createMatter(
@@ -153,11 +161,10 @@ export async function createMatter(
 }
 
 /**
- * Matters for this Clerk user (`clerk:<userId>`), newest first.
- * Archived matters are omitted. Their messages stay on the thread.
- * Show archived is a later slice; there is no hard delete here.
+ * All matter threads for this Clerk user (`clerk:<userId>`), newest first,
+ * archived and unarchived alike. Callers filter with isArchivedMatter.
  */
-export async function listMatters(store: MatterStore, userId: string): Promise<MatterSummary[]> {
+async function ownedMatterThreads(store: MatterStore, userId: string): Promise<StorageThreadType[]> {
   const resourceId = matterResourceId(userId)
   const threads: StorageThreadType[] = []
   for (let page = 0; page < 20; page += 1) {
@@ -170,10 +177,32 @@ export async function listMatters(store: MatterStore, userId: string): Promise<M
     threads.push(...listed.threads)
     if (!listed.hasMore) break
   }
-  return threads
-    .filter((thread) => isOwnedMatter(thread, resourceId) && !isArchivedMatter(thread))
-    .map(toSummary)
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id))
+  return threads.filter((thread) => isOwnedMatter(thread, resourceId))
+}
+
+function sortSummaries(matters: MatterSummary[]): MatterSummary[] {
+  return matters.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id))
+}
+
+/**
+ * Matters for this Clerk user (`clerk:<userId>`), newest first.
+ * Archived matters are omitted. Their messages stay on the thread.
+ * There is no hard delete here; the archived set is read with
+ * listArchivedMatters and restored with unarchiveMatter.
+ */
+export async function listMatters(store: MatterStore, userId: string): Promise<MatterSummary[]> {
+  const threads = await ownedMatterThreads(store, userId)
+  return sortSummaries(threads.filter((thread) => !isArchivedMatter(thread)).map(toSummary))
+}
+
+/**
+ * Archived matters for this Clerk user, newest first — the "Archived chats"
+ * list. The thread, its title, and its messages stay on the thread; nothing
+ * here deletes or purges. Opening one to read it does not unarchive it.
+ */
+export async function listArchivedMatters(store: MatterStore, userId: string): Promise<MatterSummary[]> {
+  const threads = await ownedMatterThreads(store, userId)
+  return sortSummaries(threads.filter(isArchivedMatter).map(toSummary))
 }
 
 /** Keeps the new title on the thread. A blank title is refused. Returns null when this user does not own the matter. */
@@ -215,6 +244,30 @@ export async function archiveMatter(
   })
   const updated = await ownedThread(store, userId, matterId)
   if (!updated || !isArchivedMatter(updated)) return null
+  return toSummary(updated)
+}
+
+/**
+ * Restores an archived matter to the default list. The thread, its title,
+ * and its messages were never touched by the archive, so this only clears
+ * the archivedAt marker. Unarchiving a matter that is not archived is a
+ * no-op success. Returns null when this user does not own the matter.
+ */
+export async function unarchiveMatter(
+  store: MatterStore,
+  userId: string,
+  matterId: string,
+): Promise<MatterSummary | null> {
+  const thread = await ownedThread(store, userId, matterId)
+  if (!thread) return null
+  if (!isArchivedMatter(thread)) return toSummary(thread)
+  await store.memory.updateThread({
+    id: matterId,
+    title: thread.title,
+    metadata: matterThreadMetadata(thread, { archivedAt: null }),
+  })
+  const updated = await ownedThread(store, userId, matterId)
+  if (!updated || isArchivedMatter(updated)) return null
   return toSummary(updated)
 }
 

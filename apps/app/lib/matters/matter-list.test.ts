@@ -110,6 +110,47 @@ describe('matter list route', () => {
         })
         assert.equal(hidden?.metadata?.kind, 'matter')
         assert.equal(typeof hidden?.metadata?.archivedAt, 'string')
+
+        // C-18: ?archived=true answers the archived list. It is read-only:
+        // the chat stays archived, its messages stay, and only PATCH
+        // archived:false restores it to the default list.
+        const archivedList = (await (
+          await GET(new Request('http://localhost/api/matters?archived=true'))
+        ).json()) as Listed
+        assert.deepEqual(archivedList.matters?.map((matter) => matter.id), [opened.matter.id])
+        const stillHidden = (await (await GET()).json()) as Listed
+        assert.deepEqual(stillHidden.matters, [])
+
+        const stolenUnarchive = await PATCH(jsonRequest(foreign.id, { archived: false }), {
+          params: Promise.resolve({ matterId: foreign.id }),
+        })
+        assert.equal(stolenUnarchive.status, 404)
+
+        const nonsense = await PATCH(jsonRequest(opened.matter.id, { archived: 'yes' }), {
+          params: Promise.resolve({ matterId: opened.matter.id }),
+        })
+        assert.equal(nonsense.status, 400)
+
+        const unarchived = await PATCH(jsonRequest(opened.matter.id, { archived: false }), {
+          params: Promise.resolve({ matterId: opened.matter.id }),
+        })
+        assert.equal(unarchived.status, 200)
+        const unarchivedBody = (await unarchived.json()) as { matter?: MatterSummary }
+        assert.equal(unarchivedBody.matter?.id, opened.matter.id)
+        const afterUnarchive = (await (await GET()).json()) as Listed
+        assert.deepEqual(afterUnarchive.matters?.map((matter) => matter.id), [opened.matter.id])
+        const archivedAfter = (await (
+          await GET(new Request('http://localhost/api/matters?archived=true'))
+        ).json()) as Listed
+        assert.deepEqual(archivedAfter.matters, [])
+        const restoredThread = await getMatterThread(store, 'user_test', opened.matter.id)
+        assert.equal(restoredThread?.messages[0]?.text, firstTurnOpeningText())
+        const unflagged = await store.memory.getThreadById({
+          threadId: opened.matter.id,
+          resourceId: matterResourceId('user_test'),
+        })
+        assert.equal(unflagged?.metadata?.kind, 'matter')
+        assert.notEqual(typeof unflagged?.metadata?.archivedAt, 'string')
       } finally {
         await disconnectMatterStore()
         if (previousDb === undefined) delete process.env.CHATLEGAL_MATTERS_DB
